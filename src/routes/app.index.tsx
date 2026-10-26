@@ -7,6 +7,7 @@ import { EmptyState, ListSkeleton } from "@/components/common/StateViews";
 import { useActiveTransactions, useTransactions } from "@/hooks/queries/useTransactions";
 import { useUnreadNotificationCount } from "@/hooks/queries/useNotifications";
 import { formatCurrency, statusColorClass } from "@/services/transactions.service";
+import { useHideBalances } from "@/hooks/useHideBalances";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/hooks/useLanguage";
 import type { Transaction, TxStatus } from "@/types/models";
@@ -41,6 +42,7 @@ function timeOfDayGreeting() {
 
 function Home() {
   const { user } = useAuth();
+  const { mask } = useHideBalances();
   const { t } = useLanguage();
   const { data: activeOrders, isLoading: loadingActive } = useActiveTransactions();
   const { data: transactions, isLoading: loadingRecent } = useTransactions();
@@ -99,7 +101,7 @@ function Home() {
           <div className="relative flex items-center gap-2 text-xs font-semibold tracking-[0.2em] text-muted-foreground">
             <Shield className="h-3.5 w-3.5 text-gold" /> {t("home_protected_in_escrow").toUpperCase()}
           </div>
-          <p className="relative mt-3 break-words text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">{formatCurrency(protectedTotal)}</p>
+          <p className="relative mt-3 break-words text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">{mask(formatCurrency(protectedTotal))}</p>
 
           <div className="relative mt-5 grid grid-cols-3 gap-2 border-t border-border/40 pt-4 sm:mt-6 sm:gap-3 lg:mt-8 lg:max-w-md lg:gap-6 lg:pt-6">
             <Stat label={t("home_trust_score")} value={`${user?.trustScore ?? 0} / 1000`} />

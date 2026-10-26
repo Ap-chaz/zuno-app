@@ -7,6 +7,7 @@ import { useTheme } from "@/components/zuno/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { authService } from "@/services/auth.service";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useHideBalances } from "@/hooks/useHideBalances";
 import { LANGUAGES } from "@/lib/i18n/translations";
 import {
   clearBiometric,
@@ -33,8 +34,7 @@ export function SettingsPage({ backTo = "/app/account" }: { backTo?: string }) {
   const { language, setLanguage, t } = useLanguage();
   const [biometric, setBiometric] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
-  const [hideBalances, setHideBalances] = useState(false);
-  const [pushNotifs, setPushNotifs] = useState(true);
+  const { hidden: hideBalances, setHidden: setHideBalances } = useHideBalances();
   const [langOpen, setLangOpen] = useState(false);
 
   useEffect(() => {
@@ -86,19 +86,19 @@ export function SettingsPage({ backTo = "/app/account" }: { backTo?: string }) {
             disabled={isRegistering}
             iconClassName={isRegistering ? "animate-spin" : undefined}
           />
-          <Toggle icon={Eye} label={t("settings_hide_balances")} on={hideBalances} onChange={() => setHideBalances((v) => !v)} />
+          <Toggle icon={Eye} label={t("settings_hide_balances")} on={hideBalances} onChange={() => setHideBalances(!hideBalances)} />
           <Row icon={Lock} label={t("settings_change_password")} as={Link} to="/auth/forgot" />
-          <Row icon={Lock} label={t("settings_two_factor")} badge="On" onClick={() => comingSoon("Two-factor authentication settings")} />
+          <Row icon={Lock} label={t("settings_two_factor")} badge="Coming soon" onClick={() => comingSoon("Two-factor authentication settings")} />
         </Section>
 
         <Section title={t("settings_payments")}>
-          <Row icon={CreditCard} label="M-PESA · +254 714 637 437" badge="Default" onClick={() => comingSoon("Managing payment methods")} />
-          <Row icon={CreditCard} label="Visa ending 4321" onClick={() => comingSoon("Managing payment methods")} />
-          <Row icon={CreditCard} label="Add new method" onClick={() => comingSoon("Adding a payment method")} />
+          <Row icon={CreditCard} label={user?.phone ? `M-PESA · ${user.phone}` : "M-PESA"} badge="Default" onClick={() => comingSoon("Managing payment methods")} />
+          <Row icon={CreditCard} label="Card payments" badge="Coming soon" onClick={() => comingSoon("Card payments")} />
+          <Row icon={CreditCard} label="Add new method" badge="Coming soon" onClick={() => comingSoon("Adding a payment method")} />
         </Section>
 
         <Section title={t("settings_preferences")}>
-          <Toggle icon={Bell} label={t("settings_push_notifications")} on={pushNotifs} onChange={() => setPushNotifs((v) => !v)} />
+          <Row icon={Bell} label={t("settings_push_notifications")} badge="Coming soon" onClick={() => comingSoon("Push notifications")} />
           <Toggle icon={Moon} label={t("settings_dark_mode")} on={theme === "dark"} onChange={toggle} />
 
           <li>

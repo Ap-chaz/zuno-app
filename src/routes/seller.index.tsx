@@ -25,6 +25,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { parseAnyDate } from "@/lib/api/mappers";
 import { getAvatarInitial, getFirstName } from "@/lib/user-display";
 import { currency } from "@/lib/zuno-data";
+import { useHideBalances } from "@/hooks/useHideBalances";
 import { useSellerTier } from "@/lib/seller-business-verification";
 import { useTransactions } from "@/hooks/queries/useTransactions";
 import { ErrorState } from "@/components/common/StateViews";
@@ -162,6 +163,7 @@ function RecentActivityRow({ t }: { t: Transaction }) {
 
 /** Casual/occasional seller: simple totals + a clear upgrade path. No shop, no analytics — just their own deals. */
 function BasicSellerDashboard({ tier }: { tier: SellerVerificationTier }) {
+  const { mask } = useHideBalances();
   const { earned, activeCount, completedCount, disputedCount, recent, isLoading, isError, refetch } = useSellerStats();
 
   return (
@@ -179,7 +181,7 @@ function BasicSellerDashboard({ tier }: { tier: SellerVerificationTier }) {
       ) : (
         <>
           <div className="mt-6 grid grid-cols-2 gap-3 px-4 sm:px-6 md:grid-cols-4 lg:mt-6 lg:gap-4 lg:px-0">
-            <Stat icon={Wallet} label="Total earned" value={isLoading ? "…" : currency(earned)} delta="all time" />
+            <Stat icon={Wallet} label="Total earned" value={isLoading ? "…" : mask(currency(earned))} delta="all time" />
             <Stat icon={Package} label="Active orders" value={isLoading ? "…" : String(activeCount)} delta="in escrow" />
             <Stat icon={TrendingUp} label="Completed" value={isLoading ? "…" : String(completedCount)} delta="all time" />
             <Stat icon={ShieldAlert} label="Disputed" value={isLoading ? "…" : String(disputedCount)} delta="all time" />
@@ -286,6 +288,7 @@ function BenefitRow({ icon: Icon, label }: { icon: typeof LineChart; label: stri
 
 /** Verified business seller: full analytics dashboard. Unlocked once an admin approves business verification. */
 function BusinessDashboard() {
+  const { mask } = useHideBalances();
   const {
     earned, pendingPayout, inEscrowTotal, activeCount, completedCount, disputedCount,
     recent, byWeekday, maxDay, isLoading, isError, refetch,
@@ -303,16 +306,16 @@ function BusinessDashboard() {
         <>
           <div className="mx-5 mt-5 overflow-hidden rounded-3xl border border-border/40 bg-gradient-card p-6 shadow-card lg:mx-0 lg:mt-6 lg:p-8">
             <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground">TOTAL EARNINGS</p>
-            <p className="mt-2 text-4xl font-bold lg:text-5xl">{isLoading ? "…" : currency(earned)}</p>
+            <p className="mt-2 text-4xl font-bold lg:text-5xl">{isLoading ? "…" : mask(currency(earned))}</p>
 
             <div className="mt-5 grid grid-cols-2 gap-3 border-t border-border/40 pt-4 lg:max-w-sm lg:gap-6 lg:pt-6">
               <div>
                 <p className="text-[10px] tracking-wider text-muted-foreground">PENDING PAYOUT</p>
-                <p className="mt-0.5 text-base font-bold text-gold lg:text-lg">{isLoading ? "…" : currency(pendingPayout)}</p>
+                <p className="mt-0.5 text-base font-bold text-gold lg:text-lg">{isLoading ? "…" : mask(currency(pendingPayout))}</p>
               </div>
               <div>
                 <p className="text-[10px] tracking-wider text-muted-foreground">IN ESCROW</p>
-                <p className="mt-0.5 text-base font-bold lg:text-lg">{isLoading ? "…" : currency(inEscrowTotal)}</p>
+                <p className="mt-0.5 text-base font-bold lg:text-lg">{isLoading ? "…" : mask(currency(inEscrowTotal))}</p>
               </div>
             </div>
 
@@ -327,7 +330,7 @@ function BusinessDashboard() {
           <div className="mt-6 grid grid-cols-2 gap-3 px-4 sm:px-6 md:grid-cols-4 lg:mt-6 lg:gap-4 lg:px-0">
             <Stat icon={Package} label="Active orders" value={isLoading ? "…" : String(activeCount)} delta="in escrow" />
             <Stat icon={TrendingUp} label="Completed" value={isLoading ? "…" : String(completedCount)} delta="all time" />
-            <Stat icon={Wallet} label="Pending payout" value={isLoading ? "…" : currency(pendingPayout)} delta="awaiting transfer" />
+            <Stat icon={Wallet} label="Pending payout" value={isLoading ? "…" : mask(currency(pendingPayout))} delta="awaiting transfer" />
             <Stat icon={ShieldAlert} label="Disputed" value={isLoading ? "…" : String(disputedCount)} delta="all time" />
           </div>
 
