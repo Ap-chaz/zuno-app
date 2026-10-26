@@ -250,7 +250,7 @@ function RequestCard({ q }: { q: ReturnType<typeof quote> }) {
       <Row k="Item" v="iPhone 17 Pro Max, 256GB" />
       <Row k="Agreed price" v={currency(AMOUNT)} strong />
       <Row k="You expect" v="Brand new and sealed, Natural Titanium, with box, charger and receipt." />
-      <Row k="Delivery" v="Zuno courier" />
+      <Row k="Delivery" v="Seller delivers" />
       <Breakdown q={q} />
       <p className="text-[11px] text-muted-foreground">
         The seller must agree to these terms in writing before you pay anything. This is what a dispute is judged against.

@@ -44,6 +44,23 @@ export const sellersService = {
     return rows.map(mapSeller);
   },
 
+  /**
+   * Search-as-you-type for the New Escrow seller picker. Returns at most `limit`
+   * matches among every active, phone-verified seller (not only the directory).
+   * An empty query returns the top sellers so the list is never blank.
+   */
+  async searchBookable(query: string, limit = 10): Promise<Seller[]> {
+    const q = query.trim();
+    if (env.useMockApi) {
+      const needle = q.toLowerCase();
+      return mockResolve(MOCK_SELLERS.filter((s) => !needle || s.name.toLowerCase().includes(needle)).slice(0, limit));
+    }
+    const params = new URLSearchParams({ all: "1", limit: String(limit) });
+    if (q) params.set("q", q);
+    const rows = await apiClient.getList<Record<string, any>>(`/sellers?${params.toString()}`, "sellers"); // eslint-disable-line @typescript-eslint/no-explicit-any
+    return rows.map(mapSeller);
+  },
+
   async getById(id: string): Promise<Seller> {
     if (env.useMockApi) {
       const found = MOCK_SELLERS.find((s) => s.id === id);
