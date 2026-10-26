@@ -5,6 +5,7 @@ import { TopBar } from "@/components/zuno/TopBar";
 import { KycGate } from "@/components/zuno/KycGate";
 import { ErrorState, EmptyState } from "@/components/common/StateViews";
 import { currency } from "@/lib/zuno-data";
+import { displayDate, parseAnyDate } from "@/lib/api/mappers";
 import { exportToCsv } from "@/lib/csv-export";
 import { useTransactions } from "@/hooks/queries/useTransactions";
 import { Receipt } from "lucide-react";
@@ -27,14 +28,15 @@ export const Route = createFileRoute("/seller/transactions")({
 function Payouts() {
   const { data: transactions, isLoading, isError, refetch } = useTransactions();
 
-  const completed = (transactions ?? []).filter((t) => t.status === "Completed");
-  const inEscrow = (transactions ?? []).filter((t) => t.status === "Funded" || t.status === "Protected");
+  const completed = (transactions ?? []).filter((t) => t.status === "Completed" || t.status === "Resolved");
+  const inEscrow = (transactions ?? []).filter((t) => ["Funded", "Protected", "In transit", "Inspection"].includes(t.status));
   const refunded = (transactions ?? []).filter((t) => t.status === "Refunded");
 
-  const earned = completed.reduce((sum, t) => sum + t.amount, 0);
-  const paidOut = completed.filter((t) => t.payoutStatus === "paid").reduce((sum, t) => sum + t.amount, 0);
-  const pendingPayout = completed.filter((t) => t.payoutStatus !== "paid").reduce((sum, t) => sum + t.amount, 0) +
-    inEscrow.reduce((sum, t) => sum + t.amount, 0);
+  const mine = (t: Transaction) => t.sellerReceives ?? t.amount;
+  const earned = completed.reduce((sum, t) => sum + mine(t), 0);
+  const paidOut = completed.filter((t) => t.payoutStatus === "paid").reduce((sum, t) => sum + mine(t), 0);
+  const pendingPayout = completed.filter((t) => t.payoutStatus !== "paid").reduce((sum, t) => sum + mine(t), 0) +
+    inEscrow.reduce((sum, t) => sum + mine(t), 0);
   const refunds = refunded.reduce((sum, t) => sum + t.amount, 0);
 
   const history = [...(transactions ?? [])].sort((a, b) => parseDate(b.date) - parseDate(a.date));
@@ -46,7 +48,7 @@ function Payouts() {
         history,
         [
           { header: "Item", accessor: (r: Transaction) => r.item },
-          { header: "Date", accessor: (r: Transaction) => r.date },
+          { header: "Date", accessor: (r: Transaction) => displayDate(r.date) },
           { header: "Amount (KES)", accessor: (r: Transaction) => r.amount },
           { header: "Status", accessor: (r: Transaction) => r.status },
           { header: "Payout status", accessor: (r: Transaction) => r.payoutStatus ?? "pending" },
@@ -61,7 +63,7 @@ function Payouts() {
   return (
     <div className="flex flex-1 flex-col overflow-y-auto">
       <TopBar title="Revenue & Payouts" />
-      <div className="px-5 pt-4 pb-8">
+      <div className="px-4 sm:px-6 pt-4 pb-8">
         {isError ? (
           <ErrorState description="Couldn't load your revenue data." onRetry={() => refetch()} />
         ) : isLoading ? (
@@ -104,7 +106,7 @@ function Payouts() {
                       </span>
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold">Sale · {t.item}</p>
-                        <p className="truncate text-xs text-muted-foreground">{t.date} · {t.status}</p>
+                        <p className="truncate text-xs text-muted-foreground">{displayDate(t.date)} · {t.status}</p>
                       </div>
                       <p className={`text-sm font-bold ${isOutflow ? "text-destructive" : "text-success"}`}>
                         {isOutflow ? "−" : "+"}{currency(t.amount)}
@@ -123,8 +125,7 @@ function Payouts() {
 
 // Seed dates are "DD/MM/YYYY" — sort newest first.
 function parseDate(d: string): number {
-  const [day, month, year] = d.split("/");
-  return new Date(`${year}-${month}-${day}`).getTime();
+  return parseAnyDate(d).getTime();
 }
 
 function Tile({ label, value, className = "", big, accent }: { label: string; value: string; className?: string; big?: boolean; accent?: boolean }) {

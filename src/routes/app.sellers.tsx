@@ -26,7 +26,7 @@ function Sellers() {
       {/* Search + filters live in one header block with explicit vertical
           rhythm (space-y-3) instead of relying on each row's own margin to
           not collide with the next. */}
-      <div className="space-y-3 px-5 pb-3 pt-4">
+      <div className="space-y-3 px-4 sm:px-6 pb-3 pt-4">
         <label className="flex h-12 items-center gap-3 rounded-2xl border border-border/60 bg-input px-4 focus-within:border-gold/50">
           <Search className="h-4 w-4 text-muted-foreground" />
           <input
@@ -37,10 +37,10 @@ function Sellers() {
           />
         </label>
 
-        {/* -mx-5/px-5 lets the row scroll edge-to-edge while the visible
+        {/* -mx-4 sm:-mx-6/px-4 sm:px-6 lets the row scroll edge-to-edge while the visible
             pills still line up with the page gutter; py-1 gives focus
             rings/shadows room so they don't get clipped by the scroller. */}
-        <div className="-mx-5 flex gap-2 overflow-x-auto px-5 py-1 hide-scrollbar">
+        <div className="-mx-4 sm:-mx-6 flex gap-2 overflow-x-auto px-4 sm:px-6 py-1 hide-scrollbar">
           {SELLER_CATEGORIES.map((c) => (
             <button
               key={c}
@@ -57,7 +57,7 @@ function Sellers() {
         </div>
       </div>
 
-      <div className="space-y-3 px-5 pb-6">
+      <div className="space-y-3 px-4 sm:px-6 pb-6">
         {isLoading && <ListSkeleton rows={3} />}
         {isError && <ErrorState description="Couldn't load sellers." onRetry={() => refetch()} />}
         {!isLoading && !isError && (filtered?.length ?? 0) === 0 && (

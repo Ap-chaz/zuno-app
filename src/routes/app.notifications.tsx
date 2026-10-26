@@ -65,7 +65,7 @@ export function NotificationsPage({ backTo = "/app" }: { backTo?: string }) {
         }
       />
 
-      <div className="px-5 pt-4 pb-8">
+      <div className="px-4 sm:px-6 pt-4 pb-8">
         {isLoading && <ListSkeleton rows={4} />}
 
         {isError && <ErrorState description="Couldn't load your notifications." onRetry={() => refetch()} />}

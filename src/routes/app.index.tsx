@@ -23,7 +23,11 @@ const PROGRESS_BY_STATUS: Record<TxStatus, { pct: string; label: string }> = {
   Pending: { pct: "25%", label: "Awaiting funding" },
   Funded: { pct: "50%", label: "Funds secured" },
   Protected: { pct: "75%", label: "In transit" },
+  "In transit": { pct: "75%", label: "On the way" },
+  Inspection: { pct: "90%", label: "Inspect and approve" },
   Disputed: { pct: "60%", label: "Under review" },
+  Resolved: { pct: "100%", label: "Settled" },
+  Cancelled: { pct: "0%", label: "Cancelled" },
   Completed: { pct: "100%", label: "Delivered" },
   Refunded: { pct: "0%", label: "Refunded" },
 };
@@ -48,12 +52,12 @@ function Home() {
   return (
     <div className="flex-1 overflow-y-auto pb-6">
       {/* Header — logo shown only on mobile (sidebar already carries the brand on desktop) */}
-      <header className="flex items-center justify-between px-5 pt-6 lg:px-0 lg:pt-0">
+      <header className="flex items-center justify-between px-4 pt-6 sm:px-6 lg:px-0 lg:pt-0">
         <div className="lg:hidden">
           <Logo />
         </div>
         <div className="hidden lg:block">
-          <h1 className="text-2xl font-bold tracking-tight">
+          <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
             {timeOfDayGreeting()}, {firstName} 👋
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">Here's what's happening with your escrow deals.</p>
@@ -62,7 +66,7 @@ function Home() {
           <ThemeToggle />
           <Link
             to="/app/notifications"
-            className="relative grid h-10 w-10 place-items-center rounded-xl bg-surface transition-colors hover:bg-surface-2"
+            className="relative grid h-10 w-10 place-items-center rounded-full bg-surface transition-colors hover:bg-surface-2"
             aria-label={unreadCount ? `Notifications, ${unreadCount} unread` : "Notifications"}
           >
             <Bell className="h-5 w-5 text-gold" />
@@ -74,7 +78,7 @@ function Home() {
           </Link>
           <Link
             to="/app/account"
-            className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-gold text-sm font-bold text-gold-foreground"
+            className="grid h-10 w-10 place-items-center rounded-full bg-gradient-gold text-sm font-bold text-gold-foreground"
             aria-label="Account"
           >
             {getAvatarInitial(user)}
@@ -82,12 +86,12 @@ function Home() {
         </div>
       </header>
 
-      <p className="mt-5 px-5 text-sm text-muted-foreground lg:hidden">
+      <p className="mt-5 px-4 text-sm text-muted-foreground sm:px-6 lg:hidden">
         {timeOfDayGreeting()}, {firstName} 👋
       </p>
 
       {/* Balance card */}
-      <section className="mx-5 mt-3 overflow-hidden rounded-3xl border border-border/40 bg-gradient-card p-6 shadow-card lg:mx-0 lg:mt-6 lg:p-8">
+      <section className="mx-4 mt-3 overflow-hidden rounded-3xl border border-border/40 bg-gradient-card p-5 shadow-card sm:mx-6 sm:p-6 lg:mx-0 lg:mt-6 lg:p-8">
         <div className="relative">
           <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-gold/15 blur-3xl" />
           <div className="absolute -bottom-16 left-6 h-32 w-32 rounded-full bg-accent/25 blur-3xl" />
@@ -95,9 +99,9 @@ function Home() {
           <div className="relative flex items-center gap-2 text-xs font-semibold tracking-[0.2em] text-muted-foreground">
             <Shield className="h-3.5 w-3.5 text-gold" /> {t("home_protected_in_escrow").toUpperCase()}
           </div>
-          <p className="relative mt-3 text-4xl font-bold tracking-tight lg:text-5xl">{formatCurrency(protectedTotal)}</p>
+          <p className="relative mt-3 break-words text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">{formatCurrency(protectedTotal)}</p>
 
-          <div className="relative mt-6 grid grid-cols-3 gap-3 border-t border-border/40 pt-4 lg:mt-8 lg:max-w-md lg:gap-6 lg:pt-6">
+          <div className="relative mt-5 grid grid-cols-3 gap-2 border-t border-border/40 pt-4 sm:mt-6 sm:gap-3 lg:mt-8 lg:max-w-md lg:gap-6 lg:pt-6">
             <Stat label={t("home_trust_score")} value={`${user?.trustScore ?? 0} / 1000`} />
             <Stat label={t("home_active")} value={`${activeOrders?.length ?? 0} deals`} />
             <Stat label={t("home_completed")} value={`${(transactions ?? []).filter((tx) => tx.status === "Completed").length}`} />
@@ -106,7 +110,7 @@ function Home() {
       </section>
 
       {/* Quick actions */}
-      <section className="mt-6 grid grid-cols-3 gap-3 px-5 lg:mt-6 lg:gap-4 lg:px-0">
+      <section className="mt-6 grid grid-cols-3 gap-3 px-4 sm:gap-4 sm:px-6 lg:mt-6 lg:px-0">
         <Action to="/app/new-escrow" icon={FilePlus} label="New escrow" />
         <Action to="/app/demo" icon={PlayCircle} label="Demo" />
         <Action to="/app/safepay" icon={ShieldCheck} label="SafePay" />
@@ -114,8 +118,8 @@ function Home() {
 
       {/* Main content: active orders + recent transactions become a two-column
           dashboard layout on wide screens instead of one long mobile-style stack. */}
-      <div className="mt-7 px-5 lg:mt-8 lg:grid lg:grid-cols-3 lg:gap-8 lg:px-0">
-        <section className="lg:col-span-2">
+      <div className="mt-7 px-4 sm:px-6 lg:mt-8 lg:px-0 xl:grid xl:grid-cols-5 xl:gap-8">
+        <section className="min-w-0 xl:col-span-3">
           <SectionHeader title={t("home_active_orders")} to="/app/track" seeAllLabel={t("home_see_all")} />
           {loadingActive ? (
             <ListSkeleton rows={2} className="mt-3" />
@@ -144,7 +148,7 @@ function Home() {
           )}
         </section>
 
-        <section className="mt-7 lg:col-span-1 lg:mt-0">
+        <section className="mt-7 min-w-0 xl:col-span-2 xl:mt-0">
           <SectionHeader title={t("home_recent_transactions")} to="/app/transactions" seeAllLabel={t("home_see_all")} />
           {loadingRecent ? (
             <ListSkeleton rows={3} className="mt-3" />
@@ -164,7 +168,7 @@ function Home() {
                         {t.seller} · {t.date}
                       </p>
                     </div>
-                    <div className="text-right">
+                    <div className="min-w-0 max-w-[9rem] text-right">
                       <p className="text-sm font-bold">{formatCurrency(t.amount)}</p>
                       <span className={`mt-1 inline-block rounded-full border px-2 py-0.5 text-[10px] font-semibold ${statusColorClass(t.status)}`}>
                         {t.status}
@@ -197,18 +201,18 @@ function ActiveOrderRow({ order }: { order: Transaction }) {
           <p className="truncate text-sm font-semibold">{order.item}</p>
           <p className="truncate text-xs text-muted-foreground">{order.seller}</p>
         </div>
-        <div className="text-right">
+        <div className="min-w-0 max-w-[9rem] text-right">
           <p className="text-sm font-bold">{formatCurrency(order.amount)}</p>
           <span className={`mt-1 inline-block rounded-full border px-2 py-0.5 text-[10px] font-semibold ${statusColorClass(order.status)}`}>
             {order.status}
           </span>
         </div>
       </div>
-      <div className="mt-3 flex items-center gap-2 pl-14">
+      <div className="mt-3 flex items-center gap-2 pl-[3.5rem]">
         <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-2">
           <div className="h-full rounded-full bg-gold" style={{ width: progress.pct }} />
         </div>
-        <span className="w-24 shrink-0 truncate text-right text-[10px] text-muted-foreground">{progress.label}</span>
+        <span className="w-20 shrink-0 truncate text-right text-[10px] sm:w-24 text-muted-foreground">{progress.label}</span>
       </div>
     </Link>
   );
@@ -216,9 +220,9 @@ function ActiveOrderRow({ order }: { order: Transaction }) {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <p className="text-[11px] text-muted-foreground lg:text-xs">{label}</p>
-      <p className="mt-0.5 text-sm font-bold lg:text-base">{value}</p>
+    <div className="min-w-0">
+      <p className="truncate text-[11px] text-muted-foreground lg:text-xs">{label}</p>
+      <p className="mt-0.5 truncate text-sm font-bold lg:text-base">{value}</p>
     </div>
   );
 }
@@ -227,9 +231,9 @@ function Action({ to, icon: Icon, label }: { to: string; icon: typeof FilePlus; 
   return (
     <Link
       to={to}
-      className="flex flex-col items-center gap-2 rounded-2xl lg:flex-row lg:justify-center lg:gap-3 lg:border lg:border-border/40 lg:bg-surface lg:p-4 lg:transition-colors lg:hover:border-gold/40 lg:hover:bg-surface-2"
+      className="flex flex-col items-center gap-2 rounded-full lg:flex-row lg:justify-center lg:gap-3 lg:border lg:border-border/40 lg:bg-surface lg:px-4 lg:py-3 lg:transition-colors lg:hover:border-gold/40 lg:hover:bg-surface-2"
     >
-      <span className="grid h-14 w-14 place-items-center rounded-2xl border border-border/40 bg-surface text-gold transition-colors hover:bg-surface-2 lg:h-10 lg:w-10 lg:shrink-0 lg:border-0 lg:bg-gold/15 lg:hover:bg-gold/25">
+      <span className="grid h-14 w-14 place-items-center rounded-full border border-border/40 bg-surface text-gold transition-colors hover:bg-surface-2 lg:h-10 lg:w-10 lg:shrink-0 lg:border-0 lg:bg-gold/15 lg:hover:bg-gold/25">
         <Icon className="h-5 w-5" />
       </span>
       <span className="text-[11px] font-medium text-muted-foreground lg:text-sm lg:font-semibold lg:text-foreground">{label}</span>

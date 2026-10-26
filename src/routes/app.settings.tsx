@@ -76,7 +76,7 @@ export function SettingsPage({ backTo = "/app/account" }: { backTo?: string }) {
   return (
     <div className="flex flex-1 flex-col overflow-y-auto">
       <TopBar title={t("settings_title")} back={backTo} />
-      <div className="px-5 pt-4 pb-8 space-y-6">
+      <div className="px-4 sm:px-6 pt-4 pb-8 space-y-6">
         <Section title={t("settings_security")}>
           <Toggle
             icon={isRegistering ? Loader2 : Lock}

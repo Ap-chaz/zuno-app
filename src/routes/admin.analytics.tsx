@@ -7,7 +7,7 @@ import { TopBar } from "@/components/zuno/TopBar";
 import { AdminGate } from "@/components/zuno/AdminGate";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { adminLogout } from "@/lib/admin-auth";
-import { useTransactions } from "@/hooks/queries/useTransactions";
+import { useAdminTransactions } from "@/hooks/queries/useAdmin";
 import { formatCurrency } from "@/services/transactions.service";
 import type { TxStatus } from "@/types/models";
 
@@ -19,6 +19,11 @@ export const Route = createFileRoute("/admin/analytics")({
     </AdminGate>
   ),
 });
+
+const STATUS_LABEL: Record<string, string> = {
+  PENDING: "Pending", FUNDED: "Funded", IN_TRANSIT: "In transit", DELIVERED: "Inspection", INSPECTION: "Inspection",
+  COMPLETED: "Completed", REFUNDED: "Refunded", RESOLVED: "Resolved", CANCELLED: "Cancelled", DISPUTED: "Disputed",
+};
 
 const volumeConfig: ChartConfig = { amount: { label: "Volume (KES)", color: "hsl(38 92% 50%)" } };
 const statusConfig: ChartConfig = { count: { label: "Transactions", color: "hsl(38 92% 50%)" } };
@@ -33,7 +38,21 @@ function parseSeedDate(d: string): Date {
 // spanning ~2 weeks), so the charts will look sparse until there's real
 // usage volume — that's expected for pre-launch, not a bug.
 function AdminAnalytics() {
-  const { data: transactions, isLoading } = useTransactions();
+  const { data: adminTx, isLoading } = useAdminTransactions();
+  const transactions = useMemo(
+    () =>
+      adminTx?.map((t) => {
+        const d = new Date(t.createdAt);
+        return {
+          date: `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`,
+          amount: t.buyerPays,
+          status: (STATUS_LABEL[t.status] ?? "Pending") as TxStatus,
+          category: "All deals",
+          seller: t.seller,
+        };
+      }),
+    [adminTx],
+  );
 
   const volumeByDate = useMemo(() => {
     if (!transactions) return [];

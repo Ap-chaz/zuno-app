@@ -62,3 +62,42 @@ export function useMarkPayoutPaid() {
     },
   });
 }
+
+function invalidateTx(queryClient: ReturnType<typeof useQueryClient>) {
+  queryClient.invalidateQueries({ queryKey: transactionKeys.all });
+  queryClient.invalidateQueries({ queryKey: transactionKeys.active });
+}
+
+export function useShipTransaction() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...input }: { id: string; trackingNumber: string; courierName?: string; notes?: string }) =>
+      transactionsService.ship(id, input),
+    onSuccess: () => invalidateTx(queryClient),
+  });
+}
+
+export function useConfirmDelivery() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => transactionsService.confirmDelivery(id),
+    onSuccess: () => invalidateTx(queryClient),
+  });
+}
+
+export function useApproveTransaction() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, rating }: { id: string; rating?: { score: number; comment?: string } }) =>
+      transactionsService.approve(id, rating),
+    onSuccess: () => invalidateTx(queryClient),
+  });
+}
+
+export function useCancelTransaction() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) => transactionsService.cancel(id, reason),
+    onSuccess: () => invalidateTx(queryClient),
+  });
+}

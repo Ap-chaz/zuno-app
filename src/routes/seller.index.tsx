@@ -19,9 +19,10 @@ import { Logo } from "@/components/zuno/Logo";
 import { ThemeToggle } from "@/components/zuno/ThemeToggle";
 import { SellerKycBanner, SellerKycWelcome } from "@/components/zuno/SellerKyc";
 import { useAuth } from "@/hooks/useAuth";
+import { parseAnyDate } from "@/lib/api/mappers";
 import { getAvatarInitial, getFirstName } from "@/lib/user-display";
 import { currency } from "@/lib/zuno-data";
-import { getSellerVerificationTier } from "@/lib/seller-business-verification";
+import { useSellerTier } from "@/lib/seller-business-verification";
 import { useTransactions } from "@/hooks/queries/useTransactions";
 import { ErrorState } from "@/components/common/StateViews";
 import type { SellerVerificationTier, Transaction } from "@/types/models";
@@ -39,10 +40,7 @@ function timeOfDayGreeting() {
 }
 
 // Seed dates are "DD/MM/YYYY" — convert to something Date() parses correctly.
-function parseDate(d: string): Date {
-  const [day, month, year] = d.split("/");
-  return new Date(`${year}-${month}-${day}`);
-}
+const parseDate = parseAnyDate;
 
 /**
  * Aggregate real transaction data into the numbers this dashboard needs.
@@ -57,13 +55,13 @@ function useSellerStats() {
 
   const stats = useMemo(() => {
     const list = transactions ?? [];
-    const completed = list.filter((t) => t.status === "Completed");
-    const inEscrow = list.filter((t) => t.status === "Funded" || t.status === "Protected");
+    const completed = list.filter((t) => t.status === "Completed" || t.status === "Resolved");
+    const inEscrow = list.filter((t) => ["Funded", "Protected", "In transit", "Inspection"].includes(t.status));
     const disputed = list.filter((t) => t.status === "Disputed");
 
-    const earned = completed.reduce((sum, t) => sum + t.amount, 0);
-    const pendingPayout = completed.filter((t) => t.payoutStatus !== "paid").reduce((sum, t) => sum + t.amount, 0);
-    const inEscrowTotal = inEscrow.reduce((sum, t) => sum + t.amount, 0);
+    const earned = completed.reduce((sum, t) => sum + (t.sellerReceives ?? t.amount), 0);
+    const pendingPayout = completed.filter((t) => t.payoutStatus !== "paid").reduce((sum, t) => sum + (t.sellerReceives ?? t.amount), 0);
+    const inEscrowTotal = inEscrow.reduce((sum, t) => sum + (t.sellerReceives ?? t.amount), 0);
 
     const recent = [...list].sort((a, b) => parseDate(b.date).getTime() - parseDate(a.date).getTime()).slice(0, 3);
 
@@ -74,7 +72,7 @@ function useSellerStats() {
     const byWeekday = [0, 0, 0, 0, 0, 0, 0]; // Mon..Sun
     for (const t of list) {
       const day = (parseDate(t.date).getDay() + 6) % 7; // convert Sun=0 -> Mon=0
-      byWeekday[day] += t.amount;
+      byWeekday[day] += t.sellerReceives ?? t.amount;
     }
     const maxDay = Math.max(1, ...byWeekday);
 
@@ -103,36 +101,36 @@ function useSellerStats() {
  * simpler Basic dashboard, with a clear path to upgrade.
  */
 function SellerHome() {
-  const tier = getSellerVerificationTier();
+  const tier = useSellerTier();
   return tier === "verified" ? <BusinessDashboard /> : <BasicSellerDashboard tier={tier} />;
 }
 
 function SellerHeader({ subtitle }: { subtitle: string }) {
   const { user } = useAuth();
   const firstName = getFirstName(user);
-  const isBusiness = getSellerVerificationTier() === "verified";
+  const isBusiness = useSellerTier() === "verified";
   return (
     <>
-      <header className="flex items-center justify-between px-5 pt-6 lg:px-0 lg:pt-0">
+      <header className="flex items-center justify-between px-4 pt-6 sm:px-6 lg:px-0 lg:pt-0">
         <div className="flex items-center gap-2 lg:hidden">
           <Logo />
           <span className="rounded-full border border-gold/40 bg-gold/10 px-2 py-0.5 text-[10px] font-bold text-gold">SELLER</span>
         </div>
         <div className="hidden lg:block">
-          <h1 className="text-2xl font-bold tracking-tight">{timeOfDayGreeting()}, {firstName} 👋</h1>
+          <h1 className="text-xl font-bold tracking-tight sm:text-2xl">{timeOfDayGreeting()}, {firstName} 👋</h1>
           <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Link to="/seller/notifications" className="relative grid h-10 w-10 place-items-center rounded-xl bg-surface transition-colors hover:bg-surface-2">
+          <Link to="/seller/notifications" className="relative grid h-10 w-10 place-items-center rounded-full bg-surface transition-colors hover:bg-surface-2">
             <Bell className="h-5 w-5 text-gold" />
           </Link>
-          <Link to="/seller/account" className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-gold text-sm font-bold text-gold-foreground">
-            {isBusiness ? "Z" : getAvatarInitial(user)}
+          <Link to="/seller/account" className="grid h-10 w-10 place-items-center rounded-full bg-gradient-gold text-sm font-bold text-gold-foreground">
+            {getAvatarInitial(user)}
           </Link>
         </div>
       </header>
-      <p className="mt-5 px-5 text-sm text-muted-foreground lg:hidden">
+      <p className="mt-5 px-4 text-sm text-muted-foreground sm:px-6 lg:hidden">
         {timeOfDayGreeting()}, {firstName} 👋
       </p>
       <SellerKycBanner />
@@ -152,7 +150,7 @@ function RecentActivityRow({ t }: { t: Transaction }) {
         <p className="truncate text-sm font-semibold">{t.item}</p>
         <p className="truncate text-xs text-muted-foreground">{t.buyerName ?? "Unknown buyer"}</p>
       </div>
-      <div className="text-right">
+      <div className="min-w-0 max-w-[9rem] text-right">
         <p className={`text-sm font-bold ${up ? "" : "text-destructive"}`}>{currency(t.amount)}</p>
         <p className="text-[10px] text-muted-foreground">{t.status}</p>
       </div>
@@ -173,19 +171,19 @@ function BasicSellerDashboard({ tier }: { tier: SellerVerificationTier }) {
       </div>
 
       {isError ? (
-        <div className="mt-6 px-5 lg:px-0">
+        <div className="mt-6 px-4 sm:px-6 lg:px-0">
           <ErrorState description="Couldn't load your sales data." onRetry={() => refetch()} />
         </div>
       ) : (
         <>
-          <div className="mt-6 grid grid-cols-2 gap-3 px-5 lg:mt-6 lg:grid-cols-4 lg:gap-4 lg:px-0">
+          <div className="mt-6 grid grid-cols-2 gap-3 px-4 sm:px-6 md:grid-cols-4 lg:mt-6 lg:gap-4 lg:px-0">
             <Stat icon={Wallet} label="Total earned" value={isLoading ? "…" : currency(earned)} delta="all time" />
             <Stat icon={Package} label="Active orders" value={isLoading ? "…" : String(activeCount)} delta="in escrow" />
             <Stat icon={TrendingUp} label="Completed" value={isLoading ? "…" : String(completedCount)} delta="all time" />
             <Stat icon={ShieldAlert} label="Disputed" value={isLoading ? "…" : String(disputedCount)} delta="all time" />
           </div>
 
-          <section className="mt-7 px-5 lg:mt-8 lg:px-0">
+          <section className="mt-7 px-4 sm:px-6 lg:mt-8 lg:px-0">
             <div className="flex items-center justify-between">
               <h2 className="text-base font-bold lg:text-lg">Recent activity</h2>
               <Link to="/seller/transactions" className="flex items-center gap-1 text-xs font-medium text-gold lg:text-sm">
@@ -324,15 +322,15 @@ function BusinessDashboard() {
             </button>
           </div>
 
-          <div className="mt-6 grid grid-cols-2 gap-3 px-5 lg:mt-6 lg:grid-cols-4 lg:gap-4 lg:px-0">
+          <div className="mt-6 grid grid-cols-2 gap-3 px-4 sm:px-6 md:grid-cols-4 lg:mt-6 lg:gap-4 lg:px-0">
             <Stat icon={Package} label="Active orders" value={isLoading ? "…" : String(activeCount)} delta="in escrow" />
             <Stat icon={TrendingUp} label="Completed" value={isLoading ? "…" : String(completedCount)} delta="all time" />
             <Stat icon={Wallet} label="Pending payout" value={isLoading ? "…" : currency(pendingPayout)} delta="awaiting transfer" />
             <Stat icon={ShieldAlert} label="Disputed" value={isLoading ? "…" : String(disputedCount)} delta="all time" />
           </div>
 
-          <div className="mt-7 px-5 lg:mt-8 lg:grid lg:grid-cols-3 lg:gap-8 lg:px-0">
-            <section className="lg:col-span-2">
+          <div className="mt-7 px-4 sm:px-6 lg:mt-8 lg:px-0 xl:grid xl:grid-cols-5 xl:gap-8">
+            <section className="min-w-0 xl:col-span-3">
               <div className="flex items-center justify-between">
                 <h2 className="text-base font-bold lg:text-lg">Sales overview</h2>
                 <span className="text-xs text-muted-foreground lg:text-sm">By day of week</span>
@@ -351,7 +349,7 @@ function BusinessDashboard() {
               </div>
             </section>
 
-            <section className="mt-7 lg:col-span-1 lg:mt-0">
+            <section className="mt-7 min-w-0 xl:col-span-2 xl:mt-0">
               <div className="flex items-center justify-between">
                 <h2 className="text-base font-bold lg:text-lg">Recent activity</h2>
                 <Link to="/seller/transactions" className="flex items-center gap-1 text-xs font-medium text-gold lg:text-sm">See all <ArrowUpRight className="h-3 w-3" /></Link>

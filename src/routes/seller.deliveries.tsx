@@ -14,7 +14,9 @@ import { EmptyState, ErrorState, ListSkeleton } from "@/components/common/StateV
 import { currency } from "@/lib/zuno-data";
 import { KycRequiredDialog } from "@/components/zuno/KycRequiredDialog";
 import { isKycVerified } from "@/lib/zuno-kyc";
-import { useTransactions, useUpdateTransactionStatus } from "@/hooks/queries/useTransactions";
+import { useShipTransaction, useTransactions } from "@/hooks/queries/useTransactions";
+import { formatDateNairobi } from "@/lib/api/mappers";
+import { useAuth } from "@/hooks/useAuth";
 import type { ReceiptData } from "@/lib/receipt";
 import type { Transaction } from "@/types/models";
 import {
@@ -40,15 +42,18 @@ type Tab = (typeof tabs)[number];
 // NOTE: same convention as the rest of the Seller module — there's no
 // real per-seller account table yet, so this shows every mock transaction
 // in the relevant status rather than inventing a seller-id filter.
-const STATUS_FOR_TAB: Record<Tab, Transaction["status"]> = {
-  Waiting: "Funded",
-  Active: "Protected",
-  Completed: "Completed",
+const STATUSES_FOR_TAB: Record<Tab, Transaction["status"][]> = {
+  Waiting: ["Funded"],
+  Active: ["Protected", "In transit", "Inspection", "Disputed"],
+  Completed: ["Completed", "Resolved"],
 };
 
 function Deliveries() {
   const { data: transactions, isLoading, isError, refetch } = useTransactions();
-  const updateStatus = useUpdateTransactionStatus();
+  const ship = useShipTransaction();
+  const { user } = useAuth();
+  const [shipOrder, setShipOrder] = useState<Transaction | null>(null);
+  const [tracking, setTracking] = useState({ courier: "", number: "", notes: "" });
 
   const [tab, setTab] = useState<Tab>("Waiting");
   const [detailsOrder, setDetailsOrder] = useState<Transaction | null>(null);
@@ -58,23 +63,36 @@ function Deliveries() {
   const byTab = useMemo(() => {
     const buckets: Record<Tab, Transaction[]> = { Waiting: [], Active: [], Completed: [] };
     for (const t of transactions ?? []) {
-      const tabForStatus = (Object.keys(STATUS_FOR_TAB) as Tab[]).find((k) => STATUS_FOR_TAB[k] === t.status);
+      const tabForStatus = (Object.keys(STATUSES_FOR_TAB) as Tab[]).find((k) => STATUSES_FOR_TAB[k].includes(t.status));
       if (tabForStatus) buckets[tabForStatus].push(t);
     }
     return buckets;
   }, [transactions]);
 
-  const moveOrder = (order: Transaction, toStatus: Transaction["status"], message: string) => {
-    // Shipping and delivery confirmations release money — identity must be verified first.
+  const openShip = (order: Transaction) => {
+    // The API refuses shipping for unverified sellers too; this just explains why up front.
     if (!isKycVerified()) {
       setKycOpen(true);
       return;
     }
-    updateStatus.mutate(
-      { id: order.id, status: toStatus },
+    setTracking({ courier: "", number: "", notes: "" });
+    setShipOrder(order);
+  };
+
+  const submitShip = () => {
+    if (!shipOrder) return;
+    if (!tracking.number.trim()) {
+      toast.error("Enter a tracking or waybill number so the buyer can follow the parcel.");
+      return;
+    }
+    ship.mutate(
+      { id: shipOrder.id, trackingNumber: tracking.number.trim(), courierName: tracking.courier.trim() || undefined, notes: tracking.notes.trim() || undefined },
       {
-        onSuccess: () => toast.success(message),
-        onError: () => toast.error("Couldn't update this order. Please try again."),
+        onSuccess: () => {
+          toast.success(`${shipOrder.item} marked as shipped. The buyer has been notified.`);
+          setShipOrder(null);
+        },
+        onError: (e) => toast.error(e instanceof Error ? e.message : "Couldn't update this order."),
       },
     );
   };
@@ -97,7 +115,7 @@ function Deliveries() {
         ))}
       </div>
 
-      <div className="mt-4 px-5 pb-8">
+      <div className="mt-4 px-4 sm:px-6 pb-8">
         {isError ? (
           <ErrorState description="Couldn't load your orders." onRetry={() => refetch()} />
         ) : isLoading ? (
@@ -135,13 +153,13 @@ function Deliveries() {
                       icon={Truck}
                       label="Mark shipped"
                       gold
-                      disabled={updateStatus.isPending}
-                      onClick={() => moveOrder(o, "Protected", `${o.item} marked as shipped.`)}
+                      disabled={ship.isPending}
+                      onClick={() => openShip(o)}
                     />
                   )}
                   {tab === "Active" && (
                     <div className="flex h-10 items-center justify-center gap-1.5 rounded-xl border border-dashed border-border/60 text-xs font-medium text-muted-foreground">
-                      <Clock className="h-3.5 w-3.5" /> Awaiting buyer
+                      <Clock className="h-3.5 w-3.5" /> {o.status === "Inspection" ? "Buyer inspecting" : o.status === "Disputed" ? "In dispute" : "Awaiting buyer"}
                     </div>
                   )}
                   {tab === "Completed" && (
@@ -173,18 +191,58 @@ function Deliveries() {
               <div className="space-y-3">
                 <div className="rounded-2xl border border-border/40 bg-surface-2 p-4">
                   <p className="text-xs text-muted-foreground">Escrow amount</p>
-                  <p className="mt-1 text-2xl font-bold">{currency(detailsOrder.amount)}</p>
+                  <p className="mt-1 text-2xl font-bold">{currency(detailsOrder.buyerPays ?? detailsOrder.amount)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">You receive {currency(detailsOrder.sellerReceives ?? detailsOrder.amount)} after the ZUNO fee.</p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     Held safely until the buyer confirms delivery — released to you the moment they
                     do.
                   </p>
                 </div>
                 <Detail icon={Package} label="Buyer" value={detailsOrder.buyerName ?? "Unknown buyer"} />
-                <Detail icon={Clock} label="Order placed" value={detailsOrder.date} />
-                <Detail icon={Truck} label="Status" value={tab} />
+                <Detail icon={Clock} label="Order placed" value={formatDateNairobi(detailsOrder.date, true)} />
+                <Detail icon={Truck} label="Status" value={detailsOrder.status} />
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={shipOrder !== null} onOpenChange={(open) => !open && setShipOrder(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mark as shipped</DialogTitle>
+            <DialogDescription>
+              {shipOrder?.item}. The buyer gets an SMS with these details.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <input
+              value={tracking.courier}
+              onChange={(e) => setTracking((t) => ({ ...t, courier: e.target.value }))}
+              placeholder="Courier (e.g. Wells Fargo, Fargo Courier)"
+              className="h-12 w-full rounded-2xl border border-border/60 bg-input px-4 text-sm outline-none focus:border-gold/50"
+            />
+            <input
+              value={tracking.number}
+              onChange={(e) => setTracking((t) => ({ ...t, number: e.target.value }))}
+              placeholder="Tracking / waybill number"
+              className="h-12 w-full rounded-2xl border border-border/60 bg-input px-4 text-sm outline-none focus:border-gold/50"
+            />
+            <textarea
+              value={tracking.notes}
+              onChange={(e) => setTracking((t) => ({ ...t, notes: e.target.value }))}
+              placeholder="Notes for the buyer (optional)"
+              rows={2}
+              className="w-full rounded-2xl border border-border/60 bg-input px-4 py-3 text-sm outline-none focus:border-gold/50"
+            />
+            <button
+              onClick={submitShip}
+              disabled={ship.isPending}
+              className="flex h-12 w-full items-center justify-center rounded-2xl bg-gradient-gold text-sm font-semibold text-gold-foreground shadow-gold disabled:opacity-60"
+            >
+              {ship.isPending ? "Saving…" : "Confirm shipped"}
+            </button>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -203,24 +261,22 @@ function Deliveries() {
 }
 
 function buildReceiptData(order: Transaction): ReceiptData {
-  // Flat 1.75% (medium-tier) escrow fee, split evenly, matching the rate
-  // shown on the public pricing page — real per-listing fee tiers aren't
-  // tracked in this mock data yet.
-  const feePct = 0.0175;
-  const totalFee = Math.round(order.amount * feePct);
-  const sellerFee = Math.round(totalFee / 2);
-  const payout = order.amount - sellerFee;
+  // All amounts come from the API (calculated server-side); nothing is recomputed here.
+  const date = formatDateNairobi(order.date, true);
+  const sellerFee = order.sellerFeeShare ?? 0;
+  const payout = order.sellerReceives ?? order.amount - sellerFee;
 
   return {
     id: order.id,
     kind: "payout",
-    dateLabel: order.date,
+    dateLabel: date,
     rows: [
-      { label: "Date", value: order.date },
+      { label: "Date", value: date },
       { label: "Buyer", value: order.buyerName ?? "Unknown buyer" },
       { label: "Item", value: order.item },
-      { label: "Escrow amount", value: currency(order.amount) },
+      { label: "Item price", value: currency(order.amount) },
       { label: "ZUNO fee (your share)", value: `-${currency(sellerFee)}` },
+      ...(order.mpesaReference ? [{ label: "M-Pesa receipt", value: order.mpesaReference }] : []),
     ],
     totalLabel: "Paid out to you",
     totalValue: currency(payout),

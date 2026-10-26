@@ -59,13 +59,26 @@ function ScanQR() {
             toast.success("QR code scanned");
             // Route based on payload
             setTimeout(() => {
-              if (decodedText.startsWith("zuno:seller:")) {
-                const id = decodedText.split(":")[2];
-                navigate({ to: "/app/seller/$id", params: { id } });
-              } else if (decodedText.startsWith("http")) {
-                window.location.href = decodedText;
+              // Only ever navigate inside ZUNO. Anything else is refused (no open redirects).
+              const seller = decodedText.match(/^zuno:seller:([A-Za-z0-9_-]+)$/);
+              const pay = decodedText.match(/^zuno:pay:([A-Za-z0-9_-]+)$/);
+              let internal: string | null = null;
+              try {
+                const u = new URL(decodedText);
+                if (u.origin === window.location.origin) internal = u.pathname + u.search;
+              } catch {
+                /* not a URL */
+              }
+              if (seller) {
+                navigate({ to: "/app/seller/$id", params: { id: seller[1] } });
+              } else if (pay) {
+                navigate({ to: "/pay/$transactionId", params: { transactionId: pay[1] } });
+              } else if (internal && /^\/(pay|app\/seller)\//.test(internal)) {
+                window.location.assign(internal);
               } else {
-                navigate({ to: "/app/new-escrow" });
+                toast.error("That QR code isn't a ZUNO code.");
+                setStatus("error");
+                setErrorMsg("That QR code isn't a ZUNO code. Only ZUNO seller and payment codes are accepted.");
               }
             }, 800);
           },
@@ -98,7 +111,7 @@ function ScanQR() {
 
   return (
     <div className="flex flex-1 flex-col bg-background">
-      <header className="flex items-center gap-3 px-5 pt-6 pb-3">
+      <header className="flex items-center gap-3 px-4 sm:px-6 pt-6 pb-3">
         <button
           onClick={() => navigate({ to: "/app" })}
           className="grid h-10 w-10 place-items-center rounded-xl bg-surface"
@@ -114,7 +127,7 @@ function ScanQR() {
         <div id={containerId} className="h-full min-h-[360px] w-full" />
       </div>
 
-      <div className="px-5 pb-6 pt-4">
+      <div className="px-4 sm:px-6 pb-6 pt-4">
         {status === "starting" && (
           <p className="text-center text-sm text-muted-foreground">Requesting camera access…</p>
         )}

@@ -20,6 +20,10 @@ export const translations = {
     nav_overview: "Overview",
     nav_orders: "Orders",
     nav_payouts: "Payouts",
+    nav_requests: "Requests",
+    nav_settings: "Settings",
+    nav_help: "Help",
+    nav_account: "Account",
 
     home_greeting: "Hi",
     home_protected_in_escrow: "Protected in Escrow",
@@ -58,6 +62,10 @@ export const translations = {
     nav_overview: "Muhtasari",
     nav_orders: "Maagizo",
     nav_payouts: "Malipo",
+    nav_requests: "Maombi",
+    nav_settings: "Mipangilio",
+    nav_help: "Msaada",
+    nav_account: "Akaunti",
 
     home_greeting: "Habari",
     home_protected_in_escrow: "Imelindwa kwenye Escrow",

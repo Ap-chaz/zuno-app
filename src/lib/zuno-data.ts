@@ -1,18 +1,13 @@
-export type TxStatus = "Completed" | "Pending" | "Protected" | "Refunded" | "Funded" | "Disputed";
+import type { Transaction, TxStatus, Seller } from "@/types/models";
 
-export type Transaction = {
-  id: string;
-  item: string;
-  seller: string;
-  amount: number;
-  date: string;
-  status: TxStatus;
-  category: string;
-};
+export type { Transaction, TxStatus, Seller };
 
 export const currency = (n: number) => `KES ${n.toLocaleString()}`;
 
-export const transactions: Transaction[] = [
+/** Seed rows predate sellerId/currency; transactions.service fills them in. */
+export type SeedTransaction = Omit<Transaction, "sellerId" | "currency">;
+
+export const transactions: SeedTransaction[] = [
   { id: "ZUNOAXFVLO4Y8Y", item: "iPhone 17 Pro Max", seller: "Gadget World", buyerName: "Brian Otieno", amount: 191311, date: "05/06/2026", status: "Funded", category: "Electronics" },
   { id: "ZUNO9KLP2M3N4Q", item: "MacBook Air M4", seller: "TechHub KE", buyerName: "Faith Wanjiru", amount: 145000, date: "04/06/2026", status: "Protected", category: "Electronics" },
   { id: "ZUNO7HG6FD5SA1", item: "Sony WH-1000XM6", seller: "AudioPro", buyerName: "Kevin Mwangi", amount: 42500, date: "03/06/2026", status: "Completed", category: "Audio" },
@@ -22,28 +17,6 @@ export const transactions: Transaction[] = [
   { id: "ZUNO9DF8GH7JK6", item: "DJI Mini 5 Pro", seller: "Aerial KE", buyerName: "Peter Njoroge", amount: 165000, date: "20/05/2026", status: "Disputed", category: "Drones", flaggedForReview: true },
 ];
 
-export type Seller = {
-  id: string;
-  name: string;
-  initials: string;
-  rating: number;
-  reviews: number;
-  category: string;
-  verified: boolean;
-  deals: number;
-  tagline: string;
-  color: string;
-  location?: string;
-  description?: string;
-  responseRate?: number;
-  links?: {
-    instagram?: string;
-    facebook?: string;
-    tiktok?: string;
-    whatsapp?: string;
-    website?: string;
-  };
-};
 
 export const sellers: Seller[] = [
   { id: "gadget-world", name: "Gadget World", initials: "GW", rating: 4.9, reviews: 1284, category: "Electronics", verified: true, verificationTier: "verified", disputeCount: 0, deals: 3200, tagline: "Premium phones & tablets", color: "from-amber-400/30 to-orange-500/20", location: "Nairobi, Kenya", description: "Kenya's trusted destination for genuine smartphones, tablets, and accessories. Every device is sourced directly and backed by our 12-month warranty.", responseRate: 98, payoutMethod: "mpesa", payoutDetails: "Till 174829", links: { instagram: "https://instagram.com/gadgetworld", facebook: "https://facebook.com/gadgetworld", whatsapp: "https://wa.me/254700000001", website: "https://gadgetworld.co.ke" } },

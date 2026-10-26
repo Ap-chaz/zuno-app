@@ -39,7 +39,7 @@ function SellerProfile() {
     return (
       <div className="flex flex-1 flex-col overflow-y-auto pb-8">
         <TopBar title="Seller Profile" back="/app/sellers" />
-        <div className="space-y-4 px-5 pt-4">
+        <div className="space-y-4 px-4 sm:px-6 pt-4">
           <CardSkeleton className="h-36" />
           <CardSkeleton className="h-24" />
           <CardSkeleton className="h-40" />
@@ -52,7 +52,7 @@ function SellerProfile() {
     return (
       <div className="flex flex-1 flex-col overflow-y-auto pb-8">
         <TopBar title="Seller Profile" back="/app/sellers" />
-        <div className="px-5 pt-6">
+        <div className="px-4 sm:px-6 pt-6">
           <ErrorState title="Seller not found" description="This profile may have moved or doesn't exist." onRetry={() => refetch()} />
           <Link to="/app/sellers" className="mt-4 block text-center text-sm font-semibold text-gold">
             Back to verified sellers
@@ -93,7 +93,7 @@ function SellerProfile() {
 
       {/* Identity — pt-12 clears the avatar that now overlaps via absolute
           positioning instead of a negative margin fighting the flow. */}
-      <div className="px-5 pt-12">
+      <div className="px-4 sm:px-6 pt-12">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
@@ -127,7 +127,7 @@ function SellerProfile() {
       </div>
 
       {/* Trust statistics */}
-      <section className="mt-5 px-5">
+      <section className="mt-5 px-4 sm:px-6">
         <p className="text-[11px] font-bold tracking-[0.18em] text-muted-foreground">TRUST STATISTICS</p>
         <div className="mt-3 grid grid-cols-3 gap-2.5">
           <Stat icon={Star} value={seller.rating.toFixed(1)} label="Rating" sub={`${seller.reviews} reviews`} />
@@ -139,7 +139,7 @@ function SellerProfile() {
       {/* Business links — CSS grid, 2 columns, trailing odd item spans full
           width so links never float unevenly regardless of count. */}
       {linkItems.length > 0 && (
-        <section className="mt-6 px-5">
+        <section className="mt-6 px-4 sm:px-6">
           <p className="text-[11px] font-bold tracking-[0.18em] text-muted-foreground">BUSINESS LINKS</p>
           <div className="mt-3 grid grid-cols-2 gap-3">
             {linkItems.map((l, i) => {
@@ -176,9 +176,10 @@ function SellerProfile() {
           this page's own scroll pane (and therefore the content column's
           actual width), not the raw browser viewport. `fixed` ignored the
           sidebar entirely and centered on the whole window instead. */}
-      <div className="sticky bottom-0 z-10 border-t border-border/40 bg-background/95 px-5 py-3 backdrop-blur">
+      <div className="sticky bottom-0 z-10 border-t border-border/40 bg-background/95 px-4 sm:px-6 py-3 backdrop-blur">
         <Link
           to="/app/new-escrow"
+          search={{ seller: String(seller?.id ?? "") } as never}
           className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-gradient-gold text-base font-semibold text-gold-foreground shadow-gold transition-opacity hover:opacity-95"
         >
           Start Secure Transaction <ArrowRight className="h-4 w-4" aria-hidden="true" />

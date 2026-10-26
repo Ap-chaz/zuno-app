@@ -3,6 +3,7 @@
 // go to a real endpoint and an admin queue, and this status must be mirrored
 // server-side before a seller is allowed to display / accept escrow deals.
 
+import { useAuth } from "@/hooks/useAuth";
 import type { SellerVerificationTier } from "@/types/models";
 
 export interface BusinessVerificationSubmission {
@@ -83,4 +84,14 @@ export function clearSellerVerificationSubmission() {
     w.localStorage.removeItem(SUBMISSION_KEY);
     w.localStorage.removeItem(TIER_KEY);
   } catch {}
+}
+
+
+/**
+ * The seller's business level as the SERVER reports it (Tier 2 = business verified by an admin).
+ * Nothing here can be changed from the browser.
+ */
+export function useSellerTier(): SellerVerificationTier {
+  const { user } = useAuth();
+  return (user?.sellerTier ?? 0) >= 2 ? "verified" : "unverified";
 }

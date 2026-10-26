@@ -5,6 +5,7 @@ import { TopBar } from "@/components/zuno/TopBar";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/common/StateViews";
 import { useActiveTransactions } from "@/hooks/queries/useTransactions";
 import { formatCurrency } from "@/services/transactions.service";
+import { useContracts } from "@/hooks/queries/useContracts";
 
 export const Route = createFileRoute("/app/track")({
   head: () => ({ meta: [{ title: "Track Deliveries — ZUNO" }] }),
@@ -13,20 +14,29 @@ export const Route = createFileRoute("/app/track")({
 
 // Orders funded or in-transit are the ones worth tracking; completed/refunded
 // deals belong in Activity instead.
-const TRACKABLE = new Set(["Pending", "Funded", "Protected"]);
+const TRACKABLE = new Set(["Pending", "Funded", "Protected", "In transit", "Inspection", "Disputed"]);
 
 function TrackDelivery() {
   const { data: orders, isLoading, isError, refetch } = useActiveTransactions();
   const trackable = (orders ?? []).filter((t) => TRACKABLE.has(t.status));
+  const { data: contracts } = useContracts();
+  const waiting = (contracts ?? []).filter((c) => c.viewerRole === "buyer" && c.status === "SELLER_REVIEWING");
 
   return (
     <div className="flex flex-1 flex-col overflow-y-auto">
       <TopBar title="Track Deliveries" back="/app" />
 
-      <div className="px-5 pt-4 pb-8 space-y-3">
+      <div className="px-4 sm:px-6 pt-4 pb-8 space-y-3">
         {isLoading && <ListSkeleton rows={3} />}
         {isError && <ErrorState description="Couldn't load your deliveries." onRetry={() => refetch()} />}
-        {!isLoading && !isError && trackable.length === 0 && (
+        {waiting.map((c) => (
+          <div key={c.id} className="rounded-3xl border border-gold/30 bg-gold/5 p-4">
+            <p className="text-xs font-bold tracking-[0.15em] text-gold">WAITING FOR SELLER</p>
+            <p className="mt-1 font-semibold">{c.itemName}</p>
+            <p className="text-xs text-muted-foreground">{formatCurrency(c.amount)} · the seller has until {new Date(c.expiresAt).toLocaleString("en-KE", { timeZone: "Africa/Nairobi" })} to confirm</p>
+          </div>
+        ))}
+        {!isLoading && !isError && trackable.length === 0 && waiting.length === 0 && (
           <EmptyState icon={Package} title="Nothing in transit" description="Orders on their way to you will show up here." />
         )}
 
@@ -46,7 +56,7 @@ function TrackDelivery() {
                     </span>
                   </div>
                   <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                    {order.seller} · {formatCurrency(order.amount)}
+                    {order.seller} · {formatCurrency(order.buyerPays ?? order.amount)}
                   </p>
                 </div>
               </div>

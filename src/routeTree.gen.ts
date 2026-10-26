@@ -58,8 +58,10 @@ import { Route as AuthLoginRouteImport } from './routes/auth.login'
 import { Route as AuthRoleRouteImport } from './routes/auth.role'
 import { Route as AuthSignupRouteImport } from './routes/auth.signup'
 import { Route as AuthVerifyRouteImport } from './routes/auth.verify'
+import { Route as PayTransactionIdRouteImport } from './routes/pay.$transactionId'
 import { Route as SellerIndexRouteImport } from './routes/seller.index'
 import { Route as SellerAccountRouteImport } from './routes/seller.account'
+import { Route as SellerContractsRouteImport } from './routes/seller.contracts'
 import { Route as SellerCustomersRouteImport } from './routes/seller.customers'
 import { Route as SellerDeliveriesRouteImport } from './routes/seller.deliveries'
 import { Route as SellerDisputesRouteImport } from './routes/seller.disputes'
@@ -70,9 +72,11 @@ import { Route as SellerSafepayRouteImport } from './routes/seller.safepay'
 import { Route as SellerSettingsRouteImport } from './routes/seller.settings'
 import { Route as SellerTransactionsRouteImport } from './routes/seller.transactions'
 import { Route as SellerVerificationRouteImport } from './routes/seller.verification'
+import { Route as AppDisputeIdRouteImport } from './routes/app.dispute.$id'
 import { Route as AppSellerIdRouteImport } from './routes/app.seller.$id'
 import { Route as AppTrackingIdRouteImport } from './routes/app.tracking.$id'
 import { Route as AppTransactionIdRouteImport } from './routes/app.transaction.$id'
+import { Route as SellerDisputeIdRouteImport } from './routes/seller.dispute.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -319,6 +323,11 @@ const AuthVerifyRoute = AuthVerifyRouteImport.update({
   path: '/auth/verify',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PayTransactionIdRoute = PayTransactionIdRouteImport.update({
+  id: '/pay/$transactionId',
+  path: '/pay/$transactionId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SellerIndexRoute = SellerIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -327,6 +336,11 @@ const SellerIndexRoute = SellerIndexRouteImport.update({
 const SellerAccountRoute = SellerAccountRouteImport.update({
   id: '/account',
   path: '/account',
+  getParentRoute: () => SellerRoute,
+} as any)
+const SellerContractsRoute = SellerContractsRouteImport.update({
+  id: '/contracts',
+  path: '/contracts',
   getParentRoute: () => SellerRoute,
 } as any)
 const SellerCustomersRoute = SellerCustomersRouteImport.update({
@@ -379,6 +393,11 @@ const SellerVerificationRoute = SellerVerificationRouteImport.update({
   path: '/verification',
   getParentRoute: () => SellerRoute,
 } as any)
+const AppDisputeIdRoute = AppDisputeIdRouteImport.update({
+  id: '/dispute/$id',
+  path: '/dispute/$id',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSellerIdRoute = AppSellerIdRouteImport.update({
   id: '/seller/$id',
   path: '/seller/$id',
@@ -393,6 +412,11 @@ const AppTransactionIdRoute = AppTransactionIdRouteImport.update({
   id: '/transaction/$id',
   path: '/transaction/$id',
   getParentRoute: () => AppRoute,
+} as any)
+const SellerDisputeIdRoute = SellerDisputeIdRouteImport.update({
+  id: '/dispute/$id',
+  path: '/dispute/$id',
+  getParentRoute: () => SellerRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -443,7 +467,9 @@ export interface FileRoutesByFullPath {
   '/auth/role': typeof AuthRoleRoute
   '/auth/signup': typeof AuthSignupRoute
   '/auth/verify': typeof AuthVerifyRoute
+  '/pay/$transactionId': typeof PayTransactionIdRoute
   '/seller/account': typeof SellerAccountRoute
+  '/seller/contracts': typeof SellerContractsRoute
   '/seller/customers': typeof SellerCustomersRoute
   '/seller/deliveries': typeof SellerDeliveriesRoute
   '/seller/disputes': typeof SellerDisputesRoute
@@ -457,9 +483,11 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/app/': typeof AppIndexRoute
   '/seller/': typeof SellerIndexRoute
+  '/app/dispute/$id': typeof AppDisputeIdRoute
   '/app/seller/$id': typeof AppSellerIdRoute
   '/app/tracking/$id': typeof AppTrackingIdRoute
   '/app/transaction/$id': typeof AppTransactionIdRoute
+  '/seller/dispute/$id': typeof SellerDisputeIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -507,7 +535,9 @@ export interface FileRoutesByTo {
   '/auth/role': typeof AuthRoleRoute
   '/auth/signup': typeof AuthSignupRoute
   '/auth/verify': typeof AuthVerifyRoute
+  '/pay/$transactionId': typeof PayTransactionIdRoute
   '/seller/account': typeof SellerAccountRoute
+  '/seller/contracts': typeof SellerContractsRoute
   '/seller/customers': typeof SellerCustomersRoute
   '/seller/deliveries': typeof SellerDeliveriesRoute
   '/seller/disputes': typeof SellerDisputesRoute
@@ -521,9 +551,11 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/app': typeof AppIndexRoute
   '/seller': typeof SellerIndexRoute
+  '/app/dispute/$id': typeof AppDisputeIdRoute
   '/app/seller/$id': typeof AppSellerIdRoute
   '/app/tracking/$id': typeof AppTrackingIdRoute
   '/app/transaction/$id': typeof AppTransactionIdRoute
+  '/seller/dispute/$id': typeof SellerDisputeIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -574,7 +606,9 @@ export interface FileRoutesById {
   '/auth/role': typeof AuthRoleRoute
   '/auth/signup': typeof AuthSignupRoute
   '/auth/verify': typeof AuthVerifyRoute
+  '/pay/$transactionId': typeof PayTransactionIdRoute
   '/seller/account': typeof SellerAccountRoute
+  '/seller/contracts': typeof SellerContractsRoute
   '/seller/customers': typeof SellerCustomersRoute
   '/seller/deliveries': typeof SellerDeliveriesRoute
   '/seller/disputes': typeof SellerDisputesRoute
@@ -588,9 +622,11 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/app/': typeof AppIndexRoute
   '/seller/': typeof SellerIndexRoute
+  '/app/dispute/$id': typeof AppDisputeIdRoute
   '/app/seller/$id': typeof AppSellerIdRoute
   '/app/tracking/$id': typeof AppTrackingIdRoute
   '/app/transaction/$id': typeof AppTransactionIdRoute
+  '/seller/dispute/$id': typeof SellerDisputeIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -642,7 +678,9 @@ export interface FileRouteTypes {
     | '/auth/role'
     | '/auth/signup'
     | '/auth/verify'
+    | '/pay/$transactionId'
     | '/seller/account'
+    | '/seller/contracts'
     | '/seller/customers'
     | '/seller/deliveries'
     | '/seller/disputes'
@@ -656,9 +694,11 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/app/'
     | '/seller/'
+    | '/app/dispute/$id'
     | '/app/seller/$id'
     | '/app/tracking/$id'
     | '/app/transaction/$id'
+    | '/seller/dispute/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -706,7 +746,9 @@ export interface FileRouteTypes {
     | '/auth/role'
     | '/auth/signup'
     | '/auth/verify'
+    | '/pay/$transactionId'
     | '/seller/account'
+    | '/seller/contracts'
     | '/seller/customers'
     | '/seller/deliveries'
     | '/seller/disputes'
@@ -720,9 +762,11 @@ export interface FileRouteTypes {
     | '/admin'
     | '/app'
     | '/seller'
+    | '/app/dispute/$id'
     | '/app/seller/$id'
     | '/app/tracking/$id'
     | '/app/transaction/$id'
+    | '/seller/dispute/$id'
   id:
     | '__root__'
     | '/'
@@ -772,7 +816,9 @@ export interface FileRouteTypes {
     | '/auth/role'
     | '/auth/signup'
     | '/auth/verify'
+    | '/pay/$transactionId'
     | '/seller/account'
+    | '/seller/contracts'
     | '/seller/customers'
     | '/seller/deliveries'
     | '/seller/disputes'
@@ -786,9 +832,11 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/app/'
     | '/seller/'
+    | '/app/dispute/$id'
     | '/app/seller/$id'
     | '/app/tracking/$id'
     | '/app/transaction/$id'
+    | '/seller/dispute/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -826,6 +874,7 @@ export interface RootRouteChildren {
   AuthRoleRoute: typeof AuthRoleRoute
   AuthSignupRoute: typeof AuthSignupRoute
   AuthVerifyRoute: typeof AuthVerifyRoute
+  PayTransactionIdRoute: typeof PayTransactionIdRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
@@ -1174,6 +1223,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthVerifyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pay/$transactionId': {
+      id: '/pay/$transactionId'
+      path: '/pay/$transactionId'
+      fullPath: '/pay/$transactionId'
+      preLoaderRoute: typeof PayTransactionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/seller/': {
       id: '/seller/'
       path: '/'
@@ -1186,6 +1242,13 @@ declare module '@tanstack/react-router' {
       path: '/account'
       fullPath: '/seller/account'
       preLoaderRoute: typeof SellerAccountRouteImport
+      parentRoute: typeof SellerRoute
+    }
+    '/seller/contracts': {
+      id: '/seller/contracts'
+      path: '/contracts'
+      fullPath: '/seller/contracts'
+      preLoaderRoute: typeof SellerContractsRouteImport
       parentRoute: typeof SellerRoute
     }
     '/seller/customers': {
@@ -1258,6 +1321,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SellerVerificationRouteImport
       parentRoute: typeof SellerRoute
     }
+    '/app/dispute/$id': {
+      id: '/app/dispute/$id'
+      path: '/dispute/$id'
+      fullPath: '/app/dispute/$id'
+      preLoaderRoute: typeof AppDisputeIdRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/seller/$id': {
       id: '/app/seller/$id'
       path: '/seller/$id'
@@ -1279,6 +1349,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTransactionIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/seller/dispute/$id': {
+      id: '/seller/dispute/$id'
+      path: '/dispute/$id'
+      fullPath: '/seller/dispute/$id'
+      preLoaderRoute: typeof SellerDisputeIdRouteImport
+      parentRoute: typeof SellerRoute
+    }
   }
 }
 
@@ -1297,6 +1374,7 @@ interface AppRouteChildren {
   AppTransactionsRoute: typeof AppTransactionsRoute
   AppVerificationRoute: typeof AppVerificationRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppDisputeIdRoute: typeof AppDisputeIdRoute
   AppSellerIdRoute: typeof AppSellerIdRoute
   AppTrackingIdRoute: typeof AppTrackingIdRoute
   AppTransactionIdRoute: typeof AppTransactionIdRoute
@@ -1317,6 +1395,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppTransactionsRoute: AppTransactionsRoute,
   AppVerificationRoute: AppVerificationRoute,
   AppIndexRoute: AppIndexRoute,
+  AppDisputeIdRoute: AppDisputeIdRoute,
   AppSellerIdRoute: AppSellerIdRoute,
   AppTrackingIdRoute: AppTrackingIdRoute,
   AppTransactionIdRoute: AppTransactionIdRoute,
@@ -1326,6 +1405,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 interface SellerRouteChildren {
   SellerAccountRoute: typeof SellerAccountRoute
+  SellerContractsRoute: typeof SellerContractsRoute
   SellerCustomersRoute: typeof SellerCustomersRoute
   SellerDeliveriesRoute: typeof SellerDeliveriesRoute
   SellerDisputesRoute: typeof SellerDisputesRoute
@@ -1337,10 +1417,12 @@ interface SellerRouteChildren {
   SellerTransactionsRoute: typeof SellerTransactionsRoute
   SellerVerificationRoute: typeof SellerVerificationRoute
   SellerIndexRoute: typeof SellerIndexRoute
+  SellerDisputeIdRoute: typeof SellerDisputeIdRoute
 }
 
 const SellerRouteChildren: SellerRouteChildren = {
   SellerAccountRoute: SellerAccountRoute,
+  SellerContractsRoute: SellerContractsRoute,
   SellerCustomersRoute: SellerCustomersRoute,
   SellerDeliveriesRoute: SellerDeliveriesRoute,
   SellerDisputesRoute: SellerDisputesRoute,
@@ -1352,6 +1434,7 @@ const SellerRouteChildren: SellerRouteChildren = {
   SellerTransactionsRoute: SellerTransactionsRoute,
   SellerVerificationRoute: SellerVerificationRoute,
   SellerIndexRoute: SellerIndexRoute,
+  SellerDisputeIdRoute: SellerDisputeIdRoute,
 }
 
 const SellerRouteWithChildren =
@@ -1392,6 +1475,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoleRoute: AuthRoleRoute,
   AuthSignupRoute: AuthSignupRoute,
   AuthVerifyRoute: AuthVerifyRoute,
+  PayTransactionIdRoute: PayTransactionIdRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
 export const routeTree = rootRouteImport

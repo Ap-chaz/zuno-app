@@ -4,8 +4,10 @@ import { User, IdCard, Phone, Mail, Globe, Calendar, Upload, Camera, ImageIcon, 
 import { TopBar } from "@/components/zuno/TopBar";
 import { PhoneFrame } from "@/components/zuno/PhoneFrame";
 import { useAuth } from "@/hooks/useAuth";
+import { authService } from "@/services/auth.service";
+import { toast } from "sonner";
 import { getRole } from "@/lib/zuno-role";
-import { consumeKycIntent, loadKycDraft, saveKycDraft, setKycStatus } from "@/lib/zuno-kyc";
+import { consumeKycIntent, loadKycDraft, saveKycDraft } from "@/lib/zuno-kyc";
 
 type KycSearch = { redirect?: string };
 
@@ -17,9 +19,9 @@ export const Route = createFileRoute("/auth/kyc")({
   component: KycScreen,
 });
 
-const TOTAL_ITEMS = 8; // 6 detail fields + front and back of ID
+const TOTAL_ITEMS = 9; // 6 detail fields + front/back of ID + selfie
 
-type DocState = { name: string; progress: number; done: boolean } | null;
+type DocState = { name: string; progress: number; done: boolean; file: File } | null;
 type KycForm = {
   fullName: string; idNumber: string; phone: string; email: string; country: string; dob: string;
 };
@@ -27,7 +29,7 @@ type KycForm = {
 function KycScreen() {
   const navigate = useNavigate();
   const { redirect } = Route.useSearch();
-  const { user } = useAuth();
+  const { user, refresh } = useAuth();
   const [form, setForm] = useState<KycForm>({
     fullName: "",
     idNumber: "",
@@ -38,6 +40,7 @@ function KycScreen() {
   });
   const [front, setFront] = useState<DocState>(null);
   const [back, setBack] = useState<DocState>(null);
+  const [selfie, setSelfie] = useState<DocState>(null);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -73,6 +76,7 @@ function KycScreen() {
     if (!form.dob) e.dob = "Required";
     if (!front?.done) e.front = "Upload front of ID";
     if (!back?.done) e.back = "Upload back of ID";
+    if (!selfie?.done) e.selfie = "Take a selfie holding your ID";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -86,23 +90,30 @@ function KycScreen() {
     form.dob,
     front?.done,
     back?.done,
+    selfie?.done,
   ].filter(Boolean).length;
 
-  const handleContinue = () => {
-    if (!validate()) return;
+  const handleContinue = async () => {
+    if (!validate() || !front?.file || !selfie?.file) return;
     setSubmitting(true);
     try {
-      sessionStorage.setItem("zuno_kyc", JSON.stringify(form));
-    } catch {}
-    setKycStatus("verified");
-    const target = redirect || consumeKycIntent() || (getRole() === "seller" ? "/seller" : "/app");
-    setTimeout(() => {
-      if (typeof window !== "undefined" && target.startsWith("/")) {
-        window.location.assign(target);
-      } else {
-        navigate({ to: getRole() === "seller" ? "/seller" : "/app" });
-      }
-    }, 600);
+      await authService.submitKyc({
+        fullName: form.fullName,
+        idNumber: form.idNumber,
+        dob: form.dob,
+        idFront: front.file,
+        idBack: back?.file,
+        selfie: selfie.file,
+      });
+      await refresh();
+      toast.success("Documents submitted. We'll review them and send you an SMS.");
+      const target = redirect || consumeKycIntent() || (getRole() === "seller" ? "/seller" : "/app");
+      navigate({ to: target.startsWith("/") ? target : "/seller" } as never);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't submit your documents. Try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -158,6 +169,7 @@ function KycScreen() {
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <DocUpload label="Front of ID" state={front} setState={setFront} error={errors.front} />
           <DocUpload label="Back of ID" state={back} setState={setBack} error={errors.back} />
+          <DocUpload label="Selfie holding your ID" state={selfie} setState={setSelfie} error={errors.selfie} />
         </div>
 
         {/* Notice */}
@@ -221,17 +233,11 @@ function DocUpload({ label, state, setState, error }: { label: string; state: Do
 
   const handleFile = (f: File | undefined) => {
     if (!f) return;
-    setState({ name: f.name, progress: 0, done: false });
-    let p = 0;
-    const t = setInterval(() => {
-      p += 20;
-      if (p >= 100) {
-        clearInterval(t);
-        setState({ name: f.name, progress: 100, done: true });
-      } else {
-        setState({ name: f.name, progress: p, done: false });
-      }
-    }, 120);
+    if (f.size > 10 * 1024 * 1024 || !f.type.startsWith("image/")) {
+      toast.error("Choose a JPG or PNG photo under 10MB.");
+      return;
+    }
+    setState({ name: f.name, progress: 100, done: true, file: f });
   };
 
   return (

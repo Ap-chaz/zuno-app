@@ -9,14 +9,20 @@ import type { PaginatedResult } from "@/types/models";
 export class ApiError extends Error {
   status: number;
   code?: string;
+  /** Extra fields the API sent with the error (e.g. the phone to verify). */
+  data?: Record<string, unknown>;
 
-  constructor(message: string, status = 0, code?: string) {
+  constructor(message: string, status = 0, code?: string, data?: Record<string, unknown>) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
+    this.data = data;
   }
 }
+
+/** Fired when the API says the session is no longer valid, so the app can sign out and redirect. */
+export const UNAUTHORIZED_EVENT = "zuno:unauthorized";
 
 function authHeader(): Record<string, string> {
   if (typeof window === "undefined") return {};
@@ -46,16 +52,26 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     if (!res.ok) {
       let message = res.statusText || "Request failed";
       let code: string | undefined;
+      let extra: Record<string, unknown> | undefined;
       try {
         const body = await res.json();
-        // Backend error shape is `{ error: { message, code, status } }`;
-        // fall back to a flat `{ message, code }` in case that ever changes.
-        message = body?.error?.message ?? body?.message ?? message;
-        code = body?.error?.code ?? body?.code;
+        extra = body;
+        // The API answers `{ error, message, code, status }`; `error` is a string.
+        // Also tolerate a nested `{ error: { message, code } }` shape.
+        message =
+          body?.message ??
+          (typeof body?.error === "string" ? body.error : body?.error?.message) ??
+          message;
+        code = body?.code ?? body?.error?.code;
       } catch {
         // Non-JSON error body — fall back to statusText.
       }
-      throw new ApiError(message, res.status, code);
+      // An expired/invalid session on an authenticated call: tell the app to sign out.
+      // Login/register/OTP calls legitimately return 401/403 for bad input, so skip those.
+      if (res.status === 401 && !path.startsWith("/auth/")) {
+        if (typeof window !== "undefined") window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+      }
+      throw new ApiError(message, res.status, code, extra);
     }
 
     if (res.status === 204) return undefined as T;
@@ -96,10 +112,11 @@ async function getAllPages<T>(basePath: string, pageSize = 100): Promise<T[]> {
       `${basePath}${separator}page=${page}&pageSize=${pageSize}`,
       { method: "GET" },
     );
-    results.push(...res.data);
+    const rows = Array.isArray(res?.data) ? res.data : [];
+    results.push(...rows);
 
     const fetchedSoFar = results.length;
-    if (res.data.length < pageSize || fetchedSoFar >= res.total) break;
+    if (rows.length < pageSize || fetchedSoFar >= (res?.total ?? 0)) break;
     page += 1;
   }
 
@@ -113,6 +130,37 @@ async function getAllPages<T>(basePath: string, pageSize = 100): Promise<T[]> {
  */
 export const apiClient = {
   get: <T>(path: string) => request<T>(path, { method: "GET" }),
+  /** GET a non-paginated list: the API answers `{ <key>: [...] }`. */
+  getList: async <T>(path: string, key: string): Promise<T[]> => {
+    const res = await request<Record<string, unknown>>(path, { method: "GET" });
+    const rows = res?.[key];
+    return Array.isArray(rows) ? (rows as T[]) : [];
+  },
+  /** POST multipart/form-data (file uploads). Lets the browser set the boundary header. */
+  postForm: async <T>(path: string, form: FormData): Promise<T> => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), env.apiTimeoutMs * 4);
+    try {
+      const res = await fetch(`${env.apiBaseUrl}${path}`, {
+        method: "POST",
+        body: form,
+        signal: controller.signal,
+        headers: { ...authHeader() },
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const message =
+          body?.message ?? (typeof body?.error === "string" ? body.error : body?.error?.message) ?? res.statusText;
+        throw new ApiError(message || "Upload failed", res.status, body?.code);
+      }
+      return body as T;
+    } catch (err) {
+      if (err instanceof ApiError) throw err;
+      throw new ApiError("Upload failed. Check your connection and try again.", 0, "NETWORK_ERROR");
+    } finally {
+      clearTimeout(timeout);
+    }
+  },
   getAllPages,
   post: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "POST", body: body ? JSON.stringify(body) : undefined }),
@@ -122,3 +170,8 @@ export const apiClient = {
     request<T>(path, { method: "PATCH", body: body ? JSON.stringify(body) : undefined }),
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
 };
+
+/** Friendly message from any thrown value (ApiError carries the server's text). */
+export function errorMessage(e: unknown, fallback = "Something went wrong. Please try again."): string {
+  return e instanceof Error && e.message ? e.message : fallback;
+}

@@ -84,7 +84,7 @@ function DemoPage() {
 
   return (
     <div className="flex-1 overflow-y-auto pb-8">
-      <header className="flex items-center gap-3 px-5 pt-6 lg:px-0 lg:pt-0">
+      <header className="flex items-center gap-3 px-4 sm:px-6 pt-6 lg:px-0 lg:pt-0">
         <button
           onClick={() => navigate({ to: "/app" })}
           className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-surface hover:bg-surface-2"
@@ -143,7 +143,7 @@ function DemoPage() {
         </div>
       </div>
 
-      <div className="mt-5 px-5 text-center lg:mt-6">
+      <div className="mt-5 px-4 sm:px-6 text-center lg:mt-6">
         <button onClick={restart} className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground">
           <RotateCcw className="h-3 w-3" /> Restart demo
         </button>

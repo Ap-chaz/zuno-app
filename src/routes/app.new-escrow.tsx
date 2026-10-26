@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { currency } from "@/lib/zuno-data";
 import { KycGate } from "@/components/zuno/KycGate";
+import { NewDealRequest } from "@/components/zuno/NewDealRequest";
 import { ThemeToggle } from "@/components/zuno/ThemeToggle";
 import { assertKycVerified } from "@/lib/zuno-kyc";
 import { transactionsService } from "@/services/transactions.service";
@@ -16,12 +17,21 @@ import { transactionKeys } from "@/hooks/queries/useTransactions";
 
 export const Route = createFileRoute("/app/new-escrow")({
   head: () => ({ meta: [{ title: "New Escrow — ZUNO" }] }),
-  component: () => (
-    <KycGate fallback="/app">
-      <NewEscrow />
-    </KycGate>
-  ),
+  validateSearch: (s: Record<string, unknown>): { seller?: string } => ({
+    seller: typeof s.seller === "string" ? s.seller : undefined,
+  }),
+  component: RealNewDeal,
 });
+
+// The real flow. The scripted wizard below (`NewEscrow`) is only used by the /app/demo walkthrough.
+function RealNewDeal() {
+  const { seller } = Route.useSearch();
+  return (
+    <KycGate fallback="/app">
+      <NewDealRequest presetSellerId={seller} />
+    </KycGate>
+  );
+}
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
@@ -144,7 +154,7 @@ export function NewEscrow({
   return (
     <div className="flex-1 overflow-y-auto pb-8">
       {/* Header */}
-      <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-border/40 bg-background/85 px-5 pt-6 pb-4 backdrop-blur">
+      <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-border/40 bg-background/85 px-4 sm:px-6 pt-6 pb-4 backdrop-blur">
         <button onClick={back} aria-label="Back" className="grid h-10 w-10 place-items-center rounded-xl bg-surface transition-colors hover:bg-surface-2">
           <ArrowLeft className="h-5 w-5" />
         </button>
@@ -164,7 +174,7 @@ export function NewEscrow({
       </header>
 
       {/* Progress */}
-      <div className="px-5 pt-4">
+      <div className="px-4 sm:px-6 pt-4">
         <div className="flex h-1.5 overflow-hidden rounded-full bg-surface">
           <div
             className="h-full rounded-full bg-gradient-to-r from-gold to-gold/70 transition-all"
@@ -216,7 +226,7 @@ function Step1({
 }: { form: FormState; set: <K extends keyof FormState>(k: K, v: FormState[K]) => void; onNext: () => void }) {
   const valid = form.product && form.sellerName && form.sellerContact && form.amount;
   return (
-    <div className="px-5 pt-5">
+    <div className="px-4 sm:px-6 pt-5">
       <TrustBanner text="Your details build a binding contract held safely in escrow." />
       <div className="mt-5 space-y-4">
         <Field label="Product / Service Name" value={form.product} onChange={(v) => set("product", v)} placeholder="e.g. iPhone 17 Pro Max" />
@@ -246,7 +256,7 @@ function Step2({
   onAgree: (v: boolean) => void; onNext: () => void;
 }) {
   return (
-    <div className="px-5 pt-5">
+    <div className="px-4 sm:px-6 pt-5">
       <div className="rounded-3xl border border-border/40 bg-surface p-5 shadow-card">
         <div className="flex items-center gap-2 text-xs font-semibold tracking-[0.16em] text-muted-foreground">
           <FileText className="h-4 w-4 text-gold" /> DEAL CONTRACT
@@ -299,7 +309,7 @@ function Step3({ onNext, auto }: { onNext: () => void; auto?: boolean }) {
     return () => clearTimeout(t);
   }, [auto, accepted, onNext]);
   return (
-    <div className="px-5 pt-8">
+    <div className="px-4 sm:px-6 pt-8">
       <div className="rounded-3xl border border-border/40 bg-surface p-6 text-center shadow-card">
         <div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-gold/10">
           {accepted ? <Check className="h-10 w-10 text-gold" /> : <Clock className="h-10 w-10 text-gold animate-pulse" />}
@@ -335,7 +345,7 @@ function Step4({
     { id: "mpesa", label: "M-Pesa", sub: "Instant · STK Push", Icon: Smartphone },
   ];
   return (
-    <div className="px-5 pt-5">
+    <div className="px-4 sm:px-6 pt-5">
       <div className="rounded-3xl border border-border/40 bg-gradient-card p-5 shadow-card">
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">Escrow Amount</span>
@@ -406,7 +416,7 @@ function Step5({
   const etaStr = eta.toLocaleDateString("en-GB");
 
   return (
-    <div className="px-5 pt-5">
+    <div className="px-4 sm:px-6 pt-5">
       <div className="rounded-3xl border border-gold/30 bg-gradient-card p-6 text-center shadow-card">
         <Sparkles className="mx-auto h-7 w-7 text-gold" />
         <h2 className="mt-3 text-lg font-bold">Funds Secured</h2>

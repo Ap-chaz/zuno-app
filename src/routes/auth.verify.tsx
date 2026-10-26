@@ -5,7 +5,9 @@ import { toast } from "sonner";
 import { TopBar } from "@/components/zuno/TopBar";
 import { PhoneFrame } from "@/components/zuno/PhoneFrame";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { getRole } from "@/lib/zuno-role";
+import { homeFor } from "@/lib/zuno-role";
+import { useAuth } from "@/hooks/useAuth";
+import { authService } from "@/services/auth.service";
 
 const RESEND_SECONDS = 45;
 const OTP_LENGTH = 6;
@@ -17,11 +19,17 @@ export const Route = createFileRoute("/auth/verify")({
 
 function Verify() {
   const navigate = useNavigate();
+  const { verifyOtp, resendOtp } = useAuth();
+  const [phone, setPhone] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(RESEND_SECONDS);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    setPhone(authService.getPendingPhone());
+  }, []);
 
   useEffect(() => {
     intervalRef.current = setInterval(() => {
@@ -32,10 +40,15 @@ function Verify() {
     };
   }, []);
 
-  const handleResend = () => {
+  const handleResend = async () => {
     if (secondsLeft > 0) return;
-    setSecondsLeft(RESEND_SECONDS);
-    toast.success("A new code has been sent.");
+    try {
+      await resendOtp();
+      setSecondsLeft(RESEND_SECONDS);
+      toast.success("A new code has been sent.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't send a new code.");
+    }
   };
 
   const handleVerify = async () => {
@@ -45,9 +58,15 @@ function Verify() {
     }
     setError(null);
     setIsVerifying(true);
-    // Mock verification — any complete 6-digit code succeeds. Replace with
-    // a real auth.verifyOtp() service call once a backend is connected.
-    await new Promise((resolve) => setTimeout(resolve, 700));
+    let verifiedUser;
+    try {
+      verifiedUser = await verifyOtp(code);
+    } catch (err) {
+      setIsVerifying(false);
+      setCode("");
+      setError(err instanceof Error ? err.message : "That code didn't work. Try again.");
+      return;
+    }
     setIsVerifying(false);
 
     let pendingRedirect: string | null = null;
@@ -61,13 +80,12 @@ function Verify() {
       navigate({ to: pendingRedirect });
       return;
     }
-    const role = getRole();
-    navigate({ to: role === "seller" ? "/seller" : "/app" });
+    navigate({ to: homeFor(verifiedUser.role) });
   };
 
   return (
     <PhoneFrame>
-      <TopBar title="Verify" back="/auth/role" />
+      <TopBar title="Verify" back="/auth/signup" />
       <div
         className="flex flex-1 flex-col justify-between px-6"
         style={{ paddingTop: "clamp(16px, 4vh, 32px)", paddingBottom: "clamp(16px, 4vh, 32px)", gap: "clamp(16px, 3vh, 28px)" }}
@@ -76,7 +94,7 @@ function Verify() {
           <p className="text-xs font-bold tracking-[0.2em] text-accent">OTP VERIFICATION</p>
           <div>
             <p className="text-sm text-muted-foreground">Enter the 6-digit code sent to</p>
-            <p className="mt-1 text-base font-semibold">+254 714 637 437</p>
+            <p className="mt-1 text-base font-semibold">{phone ?? "your phone"}</p>
           </div>
 
           <InputOTP

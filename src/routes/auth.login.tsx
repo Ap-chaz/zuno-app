@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useRouter, useSearch } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -7,7 +7,9 @@ import { Mail, Lock, Eye, EyeOff, Fingerprint, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { TopBar } from "@/components/zuno/TopBar";
 import { PhoneFrame } from "@/components/zuno/PhoneFrame";
-import { getRole, setRole } from "@/lib/zuno-role";
+import { homeFor } from "@/lib/zuno-role";
+import { ApiError } from "@/lib/api/client";
+import { authService } from "@/services/auth.service";
 import { useAuth } from "@/hooks/useAuth";
 import { hasRegisteredBiometric, verifyBiometric } from "@/lib/webauthn";
 
@@ -29,6 +31,7 @@ export const Route = createFileRoute("/auth/login")({
 
 function Login() {
   const navigate = useNavigate();
+  const router = useRouter();
   const { redirect } = useSearch({ from: "/auth/login" });
   const { login, restoreSession } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
@@ -43,14 +46,14 @@ function Login() {
   });
 
   const routeAfterLogin = () => {
-    if (redirect) {
-      // Protected deal & other buyer flows require buyer role
-      setRole("buyer");
-      navigate({ to: redirect });
+    // Read the role the server just gave us (state may not have re-rendered yet).
+    const role = authService.getStoredSession()?.user.role;
+    // Only same-site paths ("/x"), never "//host" or full URLs.
+    if (redirect && redirect.startsWith("/") && !redirect.startsWith("//") && role !== "admin") {
+      router.history.push(redirect);
       return;
     }
-    const role = getRole();
-    navigate({ to: role === "seller" ? "/seller" : "/app" });
+    navigate({ to: homeFor(role) });
   };
 
   const onSubmit = async (values: LoginForm) => {
@@ -58,6 +61,13 @@ function Login() {
       await login({ identifier: values.identifier, password: values.password });
       routeAfterLogin();
     } catch (err) {
+      if (err instanceof ApiError && err.code === "PHONE_NOT_VERIFIED") {
+        // The API just texted a fresh code to the number on this account.
+        authService.setPendingPhone((err.data?.phone as string | undefined) ?? (values.identifier.includes("@") ? null : values.identifier.trim()));
+        toast.info("Verify your phone number to continue.");
+        navigate({ to: "/auth/verify" });
+        return;
+      }
       toast.error(err instanceof Error ? err.message : "Couldn't log in. Check your details and try again.");
     }
   };
