@@ -21,6 +21,10 @@ function TrackDelivery() {
   const trackable = (orders ?? []).filter((t) => TRACKABLE.has(t.status));
   const { data: contracts } = useContracts();
   const waiting = (contracts ?? []).filter((c) => c.viewerRole === "buyer" && c.status === "SELLER_REVIEWING");
+  // Requests the seller turned down in the last 3 days, so the buyer sees it without opening the bell.
+  const declined = (contracts ?? []).filter(
+    (c) => c.viewerRole === "buyer" && c.status === "REJECTED" && Date.now() - new Date(c.expiresAt).getTime() < 3 * 86400000 + 86400000,
+  );
 
   return (
     <div className="flex flex-1 flex-col overflow-y-auto">
@@ -36,7 +40,14 @@ function TrackDelivery() {
             <p className="text-xs text-muted-foreground">{formatCurrency(c.amount)} · the seller has until {new Date(c.expiresAt).toLocaleString("en-KE", { timeZone: "Africa/Nairobi" })} to confirm</p>
           </div>
         ))}
-        {!isLoading && !isError && trackable.length === 0 && waiting.length === 0 && (
+        {declined.map((c) => (
+          <div key={`d${c.id}`} className="rounded-3xl border border-destructive/40 bg-destructive/10 p-4">
+            <p className="text-xs font-bold tracking-[0.15em] text-destructive">SELLER DECLINED</p>
+            <p className="mt-1 font-semibold">{c.itemName}</p>
+            <p className="text-xs text-muted-foreground">{formatCurrency(c.amount)} · No money was taken. You can pick another seller.</p>
+          </div>
+        ))}
+        {!isLoading && !isError && trackable.length === 0 && waiting.length === 0 && declined.length === 0 && (
           <EmptyState icon={Package} title="Nothing in transit" description="Orders on their way to you will show up here." />
         )}
 

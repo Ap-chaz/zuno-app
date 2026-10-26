@@ -10,6 +10,7 @@ export function useNotifications() {
   return useQuery({
     queryKey: notificationKeys.all,
     queryFn: () => notificationsService.list(),
+    refetchInterval: 20_000,
   });
 }
 
@@ -17,7 +18,7 @@ export function useUnreadNotificationCount() {
   return useQuery({
     queryKey: notificationKeys.unreadCount,
     queryFn: () => notificationsService.unreadCount(),
-    refetchInterval: 60_000,
+    refetchInterval: 20_000,
   });
 }
 

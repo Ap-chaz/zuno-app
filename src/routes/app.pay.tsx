@@ -35,6 +35,8 @@ function PayPage() {
   const [phase, setPhase] = useState<Phase>("form");
   const [message, setMessage] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const sending = useRef(false);
+  const [sendingUi, setSendingUi] = useState(false);
 
   useEffect(() => {
     if (user?.phone && !phone) setPhone(user.phone);
@@ -97,6 +99,9 @@ function PayPage() {
   };
 
   const handlePay = async () => {
+    if (sending.current) return;            // a second tap while the first is still being sent
+    sending.current = true;
+    setSendingUi(true);
     setMessage(null);
     try {
       await transactionsService.pay(tx.id, phone);
@@ -104,6 +109,9 @@ function PayPage() {
       startPolling();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Payment couldn't be started. Please try again.");
+    } finally {
+      sending.current = false;
+      setSendingUi(false);
     }
   };
 
@@ -177,12 +185,17 @@ function PayPage() {
 
         <button
           onClick={handlePay}
-          disabled={phase === "waiting" || !phone.trim()}
+          disabled={phase === "waiting" || sendingUi || !phone.trim()}
           className="my-6 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-gold text-base font-semibold text-gold-foreground shadow-gold transition-opacity disabled:opacity-60"
         >
-          {phase === "waiting" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
-          {phase === "waiting" ? "Waiting for M-Pesa…" : `Pay ${formatCurrency(total)} into Escrow`}
+          {phase === "waiting" || sendingUi ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
+          {sendingUi ? "Sending request to your phone…" : phase === "waiting" ? "Enter your PIN on your phone…" : `Pay ${formatCurrency(total)} into Escrow`}
         </button>
+        {(sendingUi || phase === "waiting") && (
+          <p className="-mt-3 mb-6 px-1 text-center text-[11px] text-muted-foreground">
+            {sendingUi ? "This can take up to 30 seconds. Please don't tap again." : "Waiting for M-Pesa to confirm. Don't leave this page."}
+          </p>
+        )}
       </div>
     </div>
   );

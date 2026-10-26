@@ -39,7 +39,7 @@ export function DisputeThread({ id, backTo }: { id: string; backTo: string }) {
   const sendOffer = () => {
     const amt = Math.round(Number(offer));
     if (!amt || amt < 1 || (maxRefund && amt > maxRefund)) return toast.error(`Enter a refund between Ksh 1 and ${fmt(maxRefund)}.`);
-    act.mutate(async () => { await disputesService.makeOffer(id, amt, ""); setOffer(""); toast.success("Offer sent."); });
+    act.mutate(async () => { await disputesService.makeOffer(id, amt, `I offer to refund ${fmt(amt)} to settle this.`); setOffer(""); toast.success("Offer sent."); });
   };
 
   return (
@@ -120,7 +120,7 @@ export function DisputeThread({ id, backTo }: { id: string; backTo: string }) {
                   Amount refunded to the buyer{maxRefund ? ` (up to ${fmt(maxRefund)})` : ""}. The seller keeps the rest.
                 </p>
                 <div className="mt-2 flex gap-2">
-                  <input inputMode="numeric" value={offer} onChange={(e) => setOffer(e.target.value)} placeholder="Refund amount (Ksh)"
+                  <input inputMode="numeric" value={offer} onChange={(e) => setOffer(e.target.value.replace(/[^0-9]/g, ""))} placeholder="Refund amount (Ksh)"
                     className="h-10 min-w-0 flex-1 rounded-lg border border-border/60 bg-input px-3 text-sm" />
                   <button disabled={act.isPending} onClick={sendOffer} className="h-10 rounded-lg bg-gradient-gold px-4 text-xs font-semibold text-gold-foreground">Send offer</button>
                 </div>

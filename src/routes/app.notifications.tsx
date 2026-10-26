@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { CreditCard, Truck, Shield, BadgeCheck, AlertTriangle, Gift, Bell, CheckCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { TopBar } from "@/components/zuno/TopBar";
@@ -44,6 +44,25 @@ export function NotificationsPage({ backTo = "/app" }: { backTo?: string }) {
   const { data: notifications, isLoading, isError, refetch } = useNotifications();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
+  const navigate = useNavigate();
+  const isSeller = backTo.startsWith("/seller");
+
+  // Where a notification should take you. Disputes carry the dispute id, deals carry the deal number.
+  function open(n: Notification) {
+    if (!n.read) markRead.mutate(n.id);
+    let to: string | null = null;
+    if (n.type === "dispute" && n.relatedId) to = `${isSeller ? "/seller" : "/app"}/dispute/${n.relatedId}`;
+    else if (n.type === "transaction") {
+      // related ids look like "contract:12", "payout:ZNO-..." or a plain deal number
+      const [kind, id] = n.relatedId?.includes(":") ? (n.relatedId.split(":") as [string, string]) : ["deal", n.relatedId ?? ""];
+      const isContractNote = /^(New deal request|Seller (accepted|declined) your deal)/.test(n.title);   // older ones have no id saved
+      if (kind === "contract" || isContractNote) to = isSeller ? "/seller/contracts" : "/app/track";
+      else if (kind === "payout") to = isSeller ? "/seller/transactions" : "/app/transactions";
+      else to = isSeller ? "/seller/deliveries" : id ? `/app/tracking/${id}` : "/app/track";
+    }
+    else if (n.type === "kyc") to = isSeller ? "/seller/verification" : null;
+    if (to) navigate({ to: to as never });
+  }
   const hasUnread = (notifications ?? []).some((n) => !n.read);
 
   return (
@@ -85,7 +104,7 @@ export function NotificationsPage({ backTo = "/app" }: { backTo?: string }) {
                   return (
                     <li key={n.id}>
                       <button
-                        onClick={() => !n.read && markRead.mutate(n.id)}
+                        onClick={() => open(n)}
                         className={`grid w-full grid-cols-[auto_1fr_auto] items-start gap-3 rounded-2xl border p-4 text-left transition-colors ${
                           n.read ? "border-border/40 bg-surface" : "border-gold/30 bg-gold/5"
                         }`}
@@ -95,7 +114,7 @@ export function NotificationsPage({ backTo = "/app" }: { backTo?: string }) {
                         </span>
                         <div className="min-w-0">
                           <p className="truncate text-sm font-semibold">{n.title}</p>
-                          <p className="truncate text-xs text-muted-foreground">{n.body}</p>
+                          <p className="line-clamp-2 text-xs text-muted-foreground">{n.body}</p>
                         </div>
                         <span className="shrink-0 text-[10px] text-muted-foreground">
                           {new Date(n.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}

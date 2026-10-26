@@ -1,7 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
+import { NotificationBell } from "@/components/zuno/NotificationBell";
+import { useDisputes } from "@/hooks/queries/useDisputes";
 import {
   Bell,
+  AlertTriangle,
   TrendingUp,
   Package,
   Wallet,
@@ -122,9 +125,7 @@ function SellerHeader({ subtitle }: { subtitle: string }) {
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Link to="/seller/notifications" className="relative grid h-10 w-10 place-items-center rounded-full bg-surface transition-colors hover:bg-surface-2">
-            <Bell className="h-5 w-5 text-gold" />
-          </Link>
+          <NotificationBell to="/seller/notifications" />
           <Link to="/seller/account" className="grid h-10 w-10 place-items-center rounded-full bg-gradient-gold text-sm font-bold text-gold-foreground">
             {getAvatarInitial(user)}
           </Link>
@@ -133,6 +134,7 @@ function SellerHeader({ subtitle }: { subtitle: string }) {
       <p className="mt-5 px-4 text-sm text-muted-foreground sm:px-6 lg:hidden">
         {timeOfDayGreeting()}, {firstName} 👋
       </p>
+      <OpenDisputesBanner />
       <SellerKycBanner />
       <SellerKycWelcome />
     </>
@@ -381,5 +383,25 @@ function Stat({ icon: Icon, label, value, delta, up }: { icon: typeof TrendingUp
       <p className="mt-3 text-lg font-bold">{value}</p>
       <p className="text-[11px] text-muted-foreground">{label}</p>
     </div>
+  );
+}
+
+/** Shown only while a dispute needs the seller, so it is one tap from the home screen. */
+function OpenDisputesBanner() {
+  const { data: disputes } = useDisputes();
+  const open = (disputes ?? []).filter((d) => d.status !== "resolved" && d.status !== "rejected");
+  if (open.length === 0) return null;
+  const first = open[0];
+  return (
+    <Link
+      to={(open.length === 1 ? `/seller/dispute/${first.id}` : "/seller/disputes") as never}
+      className="mx-4 mt-4 flex items-center gap-3 rounded-2xl sm:mx-6 border border-destructive/40 bg-destructive/10 p-4 lg:mx-0"
+    >
+      <AlertTriangle className="h-5 w-5 shrink-0 text-destructive" />
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold">{open.length === 1 ? "A buyer opened a dispute" : `${open.length} open disputes`}</p>
+        <p className="text-xs text-muted-foreground">Tap to reply, make an offer or add evidence.</p>
+      </div>
+    </Link>
   );
 }
