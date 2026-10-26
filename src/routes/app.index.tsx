@@ -131,10 +131,12 @@ function Home() {
             </div>
           ) : (
             <>
-              <ul className="mt-3 divide-y divide-border/40 overflow-hidden rounded-3xl border border-border/40 bg-surface">
+              {/* Phones: swipeable cards with the next one peeking in. sm and up: the plain list. */}
+              <ul className="-mx-4 mt-3 flex snap-x snap-mandatory scroll-pl-4 gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:block sm:divide-y sm:divide-border/40 sm:overflow-hidden sm:rounded-3xl sm:border sm:border-border/40 sm:bg-surface sm:px-0 sm:pb-0">
                 {activeOrders!.slice(0, MAX_ACTIVE_PREVIEW).map((order) => (
-                  <li key={order.id}>
-                    <ActiveOrderRow order={order} />
+                  <li key={order.id} className="w-[85%] shrink-0 snap-start sm:w-auto sm:shrink">
+                    <div className="sm:hidden"><ActiveOrderCard order={order} /></div>
+                    <div className="hidden sm:block"><ActiveOrderRow order={order} /></div>
                   </li>
                 ))}
               </ul>
@@ -184,6 +186,33 @@ function Home() {
         </section>
       </div>
     </div>
+  );
+}
+
+function ActiveOrderCard({ order }: { order: Transaction }) {
+  const progress = PROGRESS_BY_STATUS[order.status];
+  return (
+    <Link
+      to="/app/transaction/$id"
+      params={{ id: order.id }}
+      className="block rounded-3xl border border-border/40 bg-surface p-4 shadow-card transition-colors active:bg-surface-2"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-gold/15 text-gold">
+          <Package className="h-5 w-5" />
+        </span>
+        <span className={`inline-block rounded-full border px-2 py-0.5 text-[10px] font-semibold ${statusColorClass(order.status)}`}>
+          {order.status}
+        </span>
+      </div>
+      <p className="mt-3 truncate text-sm font-semibold">{order.item}</p>
+      <p className="truncate text-xs text-muted-foreground">{order.seller}</p>
+      <p className="mt-3 text-xl font-bold">{formatCurrency(order.amount)}</p>
+      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-surface-2">
+        <div className="h-full rounded-full bg-gold" style={{ width: progress.pct }} />
+      </div>
+      <p className="mt-1.5 text-[10px] text-muted-foreground">{progress.label}</p>
+    </Link>
   );
 }
 
