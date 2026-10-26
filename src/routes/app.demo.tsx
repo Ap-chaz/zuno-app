@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ShieldCheck, CheckCheck, RotateCcw } from "lucide-react";
 import { currency } from "@/lib/zuno-data";
-import { NewEscrow } from "@/routes/app.new-escrow";
+import { DemoWalkthrough } from "@/components/zuno/DemoWalkthrough";
 
 export const Route = createFileRoute("/app/demo")({
   head: () => ({ meta: [{ title: "Live Demo — ZUNO" }] }),
@@ -30,9 +30,9 @@ type Phase = "chat" | "flow";
 /**
  * A fully passive, watch-only demo: a scripted WhatsApp-style chat plays
  * out first (setting the scene — a buyer messaging a seller), then flows
- * straight into the real 6-step escrow wizard via <NewEscrow demo auto />,
- * which fills its own fields and advances its own steps on a timeline —
- * the exact real screens, nobody has to type or tap anything.
+ * into <DemoWalkthrough />, a timed walkthrough of the real deal process
+ * (request, seller confirms, payment request, M-Pesa, delivery, inspection,
+ * payout). Nobody has to type or tap anything, and nothing is saved.
  */
 function DemoPage() {
   const navigate = useNavigate();
@@ -79,30 +79,31 @@ function DemoPage() {
   }, [visible, typingFrom]);
 
   if (phase === "flow") {
-    return <NewEscrow key={flowKey} demo auto onRestart={restart} />;
+    return <DemoWalkthrough key={flowKey} onRestart={restart} />;
   }
 
   return (
     <div className="flex-1 overflow-y-auto pb-8">
-      <header className="flex items-center gap-3 px-4 sm:px-6 pt-6 lg:px-0 lg:pt-0">
-        <button
-          onClick={() => navigate({ to: "/app" })}
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-surface hover:bg-surface-2"
-          aria-label="Back"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate text-lg font-bold lg:text-2xl">See ZUNO in action</h1>
-          <p className="truncate text-xs text-muted-foreground lg:text-sm">
-            Just watch — a real deal, start to finish.
-          </p>
-        </div>
-      </header>
+      <div className="mx-auto w-full max-w-[460px] px-5 sm:px-0 md:max-w-[520px] lg:max-w-[560px] xl:max-w-[620px]">
+        <header className="flex items-center gap-3 pt-6 lg:pt-0">
+          <button
+            onClick={() => navigate({ to: "/app" })}
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-surface hover:bg-surface-2"
+            aria-label="Back"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-lg font-bold lg:text-2xl">See ZUNO in action</h1>
+            <p className="truncate text-xs text-muted-foreground lg:text-sm">
+              Just watch — a real deal, start to finish.
+            </p>
+          </div>
+        </header>
 
-      <div className="mx-5 mt-5 lg:mx-0 lg:mt-6 lg:flex lg:justify-center">
-        <div className="overflow-hidden rounded-[2rem] border border-border/40 bg-[#0b141a] shadow-card lg:w-[380px]">
-          <div className="flex h-[560px] flex-col text-white">
+        <div className="mt-5 lg:mt-6">
+          <div className="overflow-hidden rounded-[2rem] border border-border/40 bg-[#0b141a] shadow-card">
+            <div className="flex h-[clamp(420px,calc(100dvh_-_17rem),720px)] flex-col text-white">
             <div className="flex items-center gap-3 border-b border-white/10 bg-[#202c33] px-4 py-3">
               <div className="grid h-9 w-9 place-items-center rounded-full bg-gradient-violet text-xs font-bold">GW</div>
               <div className="min-w-0 flex-1">
@@ -113,7 +114,7 @@ function DemoPage() {
             </div>
 
             <div ref={scrollRef} className="flex-1 space-y-2 overflow-y-auto px-3 py-3 hide-scrollbar">
-              <div className="mx-auto max-w-[260px] rounded-lg bg-white/10 px-3 py-2 text-center text-[11px] text-white/70">
+              <div className="mx-auto max-w-[300px] rounded-lg bg-white/10 px-3 py-2 text-center text-[11px] md:text-xs text-white/70">
                 This is a demo. Nothing will be charged and no delivery will be created.
               </div>
 
@@ -135,15 +136,16 @@ function DemoPage() {
 
               {visible >= SCRIPT.length && (
                 <p className="flex items-center justify-center gap-1.5 pt-2 text-center text-[11px] text-white/40">
-                  <ShieldCheck className="h-3 w-3" /> Opening ZUNO to start the escrow…
+                  <ShieldCheck className="h-3 w-3" /> Starting the walkthrough…
                 </p>
               )}
+            </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="mt-5 px-4 sm:px-6 text-center lg:mt-6">
+      <div className="mt-5 px-4 text-center sm:px-6 lg:mt-6">
         <button onClick={restart} className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground">
           <RotateCcw className="h-3 w-3" /> Restart demo
         </button>
@@ -162,7 +164,7 @@ function Bubble({ msg }: { msg: Msg }) {
 
   return (
     <div className={`flex animate-in fade-in slide-in-from-bottom-2 duration-300 ${mine ? "justify-end" : "justify-start"}`}>
-      <div className={`max-w-[78%] rounded-2xl ${bubbleBg} px-3 py-2 text-sm`}>
+      <div className={`max-w-[78%] rounded-2xl ${bubbleBg} px-3 py-2 text-sm md:text-[15px]`}>
         {msg.kind === "image" && (
           <div className="mb-1.5 overflow-hidden rounded-lg bg-white/10">
             <div className="flex h-28 items-center justify-center text-3xl">📱</div>
