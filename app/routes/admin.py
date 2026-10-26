@@ -835,11 +835,14 @@ def list_payouts():
     rows = cursor.fetchall()
     mysql.connection.commit()
     cursor.close()
+    from datetime import date as _date
+    from decimal import Decimal as _Decimal
     for r in rows:
-        for k in ('created_at', 'processing_started_at', 'completed_at'):
-            if r.get(k):
-                r[k] = str(r[k])
-        r['amount'] = float(r['amount'])
+        for k, v in list(r.items()):
+            if isinstance(v, (datetime, _date)):
+                r[k] = v.strftime('%Y-%m-%d %H:%M:%S') if isinstance(v, datetime) else str(v)
+            elif isinstance(v, _Decimal):
+                r[k] = float(v)
     return jsonify({'payouts': rows, 'total': len(rows)}), 200
 
 
