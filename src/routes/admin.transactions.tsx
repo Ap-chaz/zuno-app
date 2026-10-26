@@ -1,11 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { Search, LogOut } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { Search, LogOut, AlertTriangle } from "lucide-react";
 import { PhoneFrame } from "@/components/zuno/PhoneFrame";
 import { TopBar } from "@/components/zuno/TopBar";
 import { AdminGate } from "@/components/zuno/AdminGate";
 import { adminLogout } from "@/lib/admin-auth";
-import { useAdminTransactions } from "@/hooks/queries/useAdmin";
+import { useAdminTransactions, useAdminPayouts } from "@/hooks/queries/useAdmin";
+import type { AdminPayout } from "@/services/admin.service";
 
 export const Route = createFileRoute("/admin/transactions")({
   head: () => ({ meta: [{ title: "Transaction Monitoring — ZUNO Admin" }] }),
@@ -19,12 +20,26 @@ export const Route = createFileRoute("/admin/transactions")({
 const STATUSES = ["", "PENDING", "FUNDED", "IN_TRANSIT", "INSPECTION", "DISPUTED", "COMPLETED", "REFUNDED", "RESOLVED", "CANCELLED"];
 const fmt = (n: number) => `Ksh ${n.toLocaleString("en-KE")}`;
 
+// A deal in one of these statuses should already have been paid out. If a payout
+// for it is still open, the status alone ("COMPLETED") would hide that.
+const FINAL_STATUSES = new Set(["COMPLETED", "REFUNDED", "RESOLVED"]);
+const PAYOUT_WHO: Record<AdminPayout["type"], string> = {
+  SELLER_RELEASE: "seller", SPLIT_SELLER: "seller", BUYER_REFUND: "buyer", SPLIT_BUYER: "buyer",
+};
+
 // Read-only on purpose: money and status only change through the escrow flow
 // (buyer approval, dispute resolution), never by editing a row here.
 function AdminTransactions() {
   const [status, setStatus] = useState("");
   const [q, setQ] = useState("");
   const { data, isLoading, isError, error, refetch } = useAdminTransactions(status || undefined, q.trim() || undefined);
+  // Every payout that is not completed yet (pending, processing, failed, needs review).
+  const { data: openPayouts } = useAdminPayouts();
+  const openByTx = useMemo(() => {
+    const m = new Map<string, AdminPayout[]>();
+    for (const p of openPayouts ?? []) m.set(p.transactionId, [...(m.get(p.transactionId) ?? []), p]);
+    return m;
+  }, [openPayouts]);
   return (
     <PhoneFrame>
       <TopBar title="Transaction Monitoring" back="/admin"
@@ -63,11 +78,30 @@ function AdminTransactions() {
                   <span className="mt-1 inline-block rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-semibold">{t.status.replace("_", " ")}</span>
                 </div>
               </div>
+              {FINAL_STATUSES.has(t.status) && openByTx.has(t.id) && <PayoutNotice payouts={openByTx.get(t.id)!} />}
             </article>
           ))}
           {!isLoading && !isError && (data?.length ?? 0) === 0 && <p className="rounded-xl bg-surface p-3 text-center text-xs text-muted-foreground">No transactions.</p>}
         </div>
       </div>
     </PhoneFrame>
+  );
+}
+
+function PayoutNotice({ payouts }: { payouts: AdminPayout[] }) {
+  const failed = payouts.some((p) => p.status === "FAILED" || p.status === "NEEDS_REVIEW");
+  const detail = payouts.map((p) => `${PAYOUT_WHO[p.type]} ${fmt(p.amount)}`).join(", ");
+  return (
+    <div
+      className={`mt-2 flex items-start gap-1.5 rounded-xl px-2.5 py-1.5 text-[11px] font-medium ${
+        failed ? "bg-destructive/10 text-destructive" : "bg-gold/10 text-gold"
+      }`}
+    >
+      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+      <span>
+        {failed ? "Payout failed" : "Payout pending"}: {detail}.{" "}
+        <Link to="/admin/payouts" className="underline">Open payout queue</Link>
+      </span>
+    </div>
   );
 }
