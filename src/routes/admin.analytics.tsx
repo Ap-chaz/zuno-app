@@ -9,7 +9,6 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } f
 import { adminLogout } from "@/lib/admin-auth";
 import { useAdminTransactions } from "@/hooks/queries/useAdmin";
 import { formatCurrency } from "@/services/transactions.service";
-import type { TxStatus } from "@/types/models";
 
 export const Route = createFileRoute("/admin/analytics")({
   head: () => ({ meta: [{ title: "Analytics — ZUNO Admin" }] }),
@@ -29,6 +28,14 @@ const volumeConfig: ChartConfig = { amount: { label: "Volume (KES)", color: "hsl
 const statusConfig: ChartConfig = { count: { label: "Transactions", color: "hsl(38 92% 50%)" } };
 const categoryConfig: ChartConfig = { amount: { label: "Volume (KES)", color: "hsl(38 92% 50%)" } };
 
+// Short axis labels (190k, 1.2M) so big amounts never get clipped on small screens.
+function compact(v: number): string {
+  const n = Math.abs(v);
+  if (n >= 1_000_000) return `${+(v / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${+(v / 1_000).toFixed(0)}k`;
+  return String(v);
+}
+
 function parseSeedDate(d: string): Date {
   const [day, month, year] = d.split("/").map(Number);
   return new Date(year, month - 1, day);
@@ -46,7 +53,7 @@ function AdminAnalytics() {
         return {
           date: `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`,
           amount: t.buyerPays,
-          status: (STATUS_LABEL[t.status] ?? "Pending") as TxStatus,
+          status: STATUS_LABEL[t.status] ?? t.status,
           category: "All deals",
           seller: t.seller,
         };
@@ -68,8 +75,9 @@ function AdminAnalytics() {
 
   const byStatus = useMemo(() => {
     if (!transactions) return [];
-    const order: TxStatus[] = ["Pending", "Funded", "Protected", "Completed", "Refunded", "Disputed"];
-    const map = new Map<TxStatus, number>();
+    // Every stage of a deal, in order, so In transit / Inspection / Resolved are counted too.
+    const order = ["Pending", "Funded", "In transit", "Inspection", "Completed", "Refunded", "Resolved", "Disputed", "Cancelled"];
+    const map = new Map<string, number>();
     order.forEach((s) => map.set(s, 0));
     transactions.forEach((t) => map.set(t.status, (map.get(t.status) ?? 0) + 1));
     return order.map((status) => ({ status, count: map.get(status) ?? 0 }));
@@ -114,27 +122,30 @@ function AdminAnalytics() {
         }
       />
 
-      <div className="px-5 pt-4 pb-8">
+      <div className="px-5 pb-8 pt-4 sm:px-6 lg:px-8">
         {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
 
         {!isLoading && (
-          <>
+          <div className="grid gap-x-6 gap-y-6 lg:grid-cols-2">
+            <section className="min-w-0 lg:col-span-2">
             <SectionTitle label="Transaction volume over time" />
-            <div className="mb-6 rounded-2xl border border-border/40 bg-surface p-3">
-              <ChartContainer config={volumeConfig} className="aspect-[16/10]">
+            <div className="rounded-2xl border border-border/40 bg-surface p-3 sm:p-4">
+              <ChartContainer config={volumeConfig} className="aspect-auto h-56 sm:h-64 lg:h-72">
                 <LineChart data={volumeByDate} margin={{ left: 4, right: 8, top: 8, bottom: 0 }}>
                   <CartesianGrid vertical={false} strokeDasharray="3 3" />
                   <XAxis dataKey="date" tickLine={false} axisLine={false} fontSize={11} />
-                  <YAxis tickLine={false} axisLine={false} fontSize={11} width={40} />
+                  <YAxis tickLine={false} axisLine={false} fontSize={11} width={44} tickFormatter={(v: number) => compact(v)} />
                   <ChartTooltip content={<ChartTooltipContent formatter={(v: any) => formatCurrency(Number(v))} />} />
                   <Line type="monotone" dataKey="amount" stroke="var(--color-amount)" strokeWidth={2} dot={{ r: 3 }} />
                 </LineChart>
               </ChartContainer>
             </div>
+            </section>
 
+            <section className="min-w-0">
             <SectionTitle label="Transactions by status" />
-            <div className="mb-6 rounded-2xl border border-border/40 bg-surface p-3">
-              <ChartContainer config={statusConfig} className="aspect-[16/10]">
+            <div className="rounded-2xl border border-border/40 bg-surface p-3 sm:p-4">
+              <ChartContainer config={statusConfig} className="aspect-auto h-56 sm:h-64 lg:h-72">
                 <BarChart data={byStatus} margin={{ left: 4, right: 8, top: 8, bottom: 0 }}>
                   <CartesianGrid vertical={false} strokeDasharray="3 3" />
                   <XAxis dataKey="status" tickLine={false} axisLine={false} fontSize={10} interval={0} angle={-20} textAnchor="end" height={40} />
@@ -144,40 +155,45 @@ function AdminAnalytics() {
                 </BarChart>
               </ChartContainer>
             </div>
+            </section>
 
+            <section className="min-w-0">
             <SectionTitle label="Volume by category" />
-            <div className="mb-6 rounded-2xl border border-border/40 bg-surface p-3">
-              <ChartContainer config={categoryConfig} className="aspect-[16/10]">
+            <div className="rounded-2xl border border-border/40 bg-surface p-3 sm:p-4">
+              <ChartContainer config={categoryConfig} className="aspect-auto h-56 sm:h-64 lg:h-72">
                 <BarChart data={byCategory} margin={{ left: 4, right: 8, top: 8, bottom: 0 }}>
                   <CartesianGrid vertical={false} strokeDasharray="3 3" />
                   <XAxis dataKey="category" tickLine={false} axisLine={false} fontSize={10} interval={0} angle={-20} textAnchor="end" height={40} />
-                  <YAxis tickLine={false} axisLine={false} fontSize={11} width={40} />
+                  <YAxis tickLine={false} axisLine={false} fontSize={11} width={44} tickFormatter={(v: number) => compact(v)} />
                   <ChartTooltip content={<ChartTooltipContent formatter={(v: any) => formatCurrency(Number(v))} />} />
                   <Bar dataKey="amount" fill="var(--color-amount)" radius={4} />
                 </BarChart>
               </ChartContainer>
             </div>
+            </section>
 
+            <section className="min-w-0 lg:col-span-2">
             <SectionTitle label="Top sellers by volume" />
-            <div className="space-y-2">
+            <div className="grid gap-2 md:grid-cols-2">
               {topSellers.map((s, i) => (
-                <div key={s.seller} className="flex items-center justify-between rounded-xl border border-border/40 bg-surface p-3">
-                  <div className="flex items-center gap-2">
+                <div key={s.seller} className="flex items-center justify-between gap-3 rounded-xl border border-border/40 bg-surface p-3">
+                  <div className="flex min-w-0 items-center gap-2">
                     <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-gold/10 text-[11px] font-bold text-gold">
                       {i + 1}
                     </span>
-                    <span className="text-sm font-medium">{s.seller}</span>
+                    <span className="truncate text-sm font-medium">{s.seller}</span>
                   </div>
-                  <span className="flex items-center gap-1 text-sm font-semibold">
+                  <span className="flex shrink-0 items-center gap-1 text-sm font-semibold">
                     <TrendingUp className="h-3.5 w-3.5 text-success" /> {formatCurrency(s.amount)}
                   </span>
                 </div>
               ))}
               {topSellers.length === 0 && (
-                <p className="rounded-xl bg-surface p-3 text-center text-xs text-muted-foreground">No data yet.</p>
+                <p className="rounded-xl bg-surface p-3 text-center text-xs text-muted-foreground md:col-span-2">No data yet.</p>
               )}
             </div>
-          </>
+            </section>
+          </div>
         )}
       </div>
     </PhoneFrame>

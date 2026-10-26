@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { Loader2, Send, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { TopBar } from "@/components/zuno/TopBar";
-import { useSellers } from "@/hooks/queries/useSellers";
+import { SellerPicker } from "@/components/zuno/SellerPicker";
 import { useCreateContract, useFeeQuote } from "@/hooks/queries/useContracts";
 import { DELIVERY_METHODS } from "@/services/contracts.service";
 import { formatCurrency } from "@/services/transactions.service";
@@ -14,7 +14,6 @@ import { formatCurrency } from "@/services/transactions.service";
  */
 export function NewDealRequest({ presetSellerId }: { presetSellerId?: string }) {
   const navigate = useNavigate();
-  const { data: sellers, isLoading: sellersLoading } = useSellers();
   const create = useCreateContract();
   const [form, setForm] = useState({
     sellerId: presetSellerId ?? "",
@@ -22,7 +21,7 @@ export function NewDealRequest({ presetSellerId }: { presetSellerId?: string }) 
     description: "",
     amount: "",
     expectations: "",
-    delivery: "PLATFORM_COURIER",
+    delivery: "SELLER_ARRANGED",
     location: "",
   });
   const amount = Math.round(Number(form.amount) || 0);
@@ -65,12 +64,7 @@ export function NewDealRequest({ presetSellerId }: { presetSellerId?: string }) 
         </div>
 
         <label className="block text-xs font-semibold text-muted-foreground">Seller</label>
-        <select value={form.sellerId} onChange={set("sellerId")} className={input} disabled={sellersLoading}>
-          <option value="">{sellersLoading ? "Loading sellers…" : "Choose a seller"}</option>
-          {(sellers ?? []).map((s) => (
-            <option key={s.id} value={s.id}>{s.name}{s.verified ? " ✓" : ""}</option>
-          ))}
-        </select>
+        <SellerPicker value={form.sellerId} onChange={(id) => setForm((f) => ({ ...f, sellerId: id }))} />
 
         <input className={input} placeholder="What are you buying? (e.g. Nike Air Max, size 42)" value={form.item} onChange={set("item")} />
         <input className={input} placeholder="Price agreed with the seller (KES)" inputMode="numeric" value={form.amount} onChange={set("amount")} />
@@ -84,7 +78,8 @@ export function NewDealRequest({ presetSellerId }: { presetSellerId?: string }) 
         <p className="-mt-1 px-1 text-[11px] text-muted-foreground">{form.expectations.trim().length}/20 characters minimum. This is what a dispute is judged against.</p>
 
         <select value={form.delivery} onChange={set("delivery")} className={input}>
-          {DELIVERY_METHODS.map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}
+          {/* Zuno courier is not live yet, so it is not offered. */}
+          {DELIVERY_METHODS.filter((d) => d.id !== "PLATFORM_COURIER").map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}
         </select>
         <input className={input} placeholder="Delivery location (optional)" value={form.location} onChange={set("location")} />
 

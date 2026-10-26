@@ -15,6 +15,16 @@ export function useSellers() {
   });
 }
 
+/** Up to 10 sellers matching `query`, for the New Escrow picker. */
+export function useSellerPicker(query: string) {
+  return useQuery({
+    queryKey: [...sellerKeys.all, "picker", query] as const,
+    queryFn: () => sellersService.searchBookable(query, 10),
+    placeholderData: (prev) => prev,
+    staleTime: 15_000,
+  });
+}
+
 export function useSeller(id: string | undefined) {
   return useQuery({
     queryKey: sellerKeys.detail(id ?? ""),
