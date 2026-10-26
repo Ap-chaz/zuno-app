@@ -26,7 +26,7 @@ const LABEL: Record<AdminPayout["type"], string> = {
 
 function AdminPayouts() {
   const [tab, setTab] = useState<"open" | "COMPLETED">("open");
-  const { data, isLoading } = useAdminPayouts(tab === "COMPLETED" ? "COMPLETED" : undefined);
+  const { data, isLoading, isError, error, refetch } = useAdminPayouts(tab === "COMPLETED" ? "COMPLETED" : undefined);
   const needsAttention = data?.filter((p) => p.status === "FAILED" || p.status === "NEEDS_REVIEW") ?? [];
   const rest = data?.filter((p) => p.status !== "FAILED" && p.status !== "NEEDS_REVIEW") ?? [];
   return (
@@ -53,7 +53,13 @@ function AdminPayouts() {
           </>
         )}
         <div className="space-y-2">{rest.map((p) => <Row key={p.id} p={p} />)}</div>
-        {!isLoading && (data?.length ?? 0) === 0 && (
+        {isError && (
+          <div className="rounded-xl bg-surface p-3 text-center text-xs text-destructive">
+            <p>Could not load payouts: {String((error as Error)?.message ?? error)}</p>
+            <button type="button" onClick={() => refetch()} className="mt-2 font-semibold underline">Try again</button>
+          </div>
+        )}
+        {!isLoading && !isError && (data?.length ?? 0) === 0 && (
           <p className="rounded-xl bg-surface p-3 text-center text-xs text-muted-foreground">Nothing here.</p>
         )}
       </div>
