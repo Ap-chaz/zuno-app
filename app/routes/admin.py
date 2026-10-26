@@ -984,3 +984,27 @@ def admin_dispute_detail(dispute_id):
             if hasattr(v, 'isoformat'):
                 row[k] = v.isoformat()
     return jsonify({'dispute': d, 'evidence': evidence, 'messages': messages}), 200
+
+
+# ══════════════════════════════════════════════════════════════
+# SHOW / HIDE SELLER IN THE VERIFIED SELLERS DIRECTORY
+# ══════════════════════════════════════════════════════════════
+@admin_bp.route('/users/<int:user_id>/listing', methods=['POST'])
+@jwt_required()
+@require_admin
+def set_seller_listing(user_id):
+    """POST /api/admin/users/<id>/listing  {"listed": true|false}
+    Admin shows or hides a seller in the Verified Sellers directory."""
+    data = request.get_json(silent=True) or {}
+    listed = data.get('listed')
+    if not isinstance(listed, bool):
+        return jsonify({'error': "'listed' must be true or false"}), 400
+    cursor = mysql.connection.cursor()
+    cursor.execute("SELECT id FROM users WHERE id = %s AND role = 'seller'", (user_id,))
+    if not cursor.fetchone():
+        cursor.close()
+        return jsonify({'error': 'Seller not found'}), 404
+    cursor.execute("UPDATE users SET is_verified = %s WHERE id = %s", (listed, user_id))
+    mysql.connection.commit()
+    cursor.close()
+    return jsonify({'message': 'Seller listed.' if listed else 'Seller hidden.', 'user_id': user_id, 'listed': listed}), 200
