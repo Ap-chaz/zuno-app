@@ -54,29 +54,30 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
 }
 
 /**
- * Seller phone layout: two tabs and a middle button that opens the rest (Orders, Payouts, Disputes).
+ * Phone layout for buyers and sellers: two tabs and a middle button that opens the rest
+ * (seller: Orders, Payouts, Disputes; buyer: Tracking, Disputes).
  * The middle button shows a red dot while a dispute is open, so nothing important hides behind it.
  */
-function SellerBottomNav({ pathname }: { pathname: string }) {
+function MoreBottomNav({ pathname, items, disputesPath, label }: { pathname: string; items: NavItem[]; disputesPath: string; label: string }) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const { data: disputes } = useDisputes();
   const hasOpenDispute = (disputes ?? []).some((d) => d.status !== "resolved" && d.status !== "rejected");
-  const primary = sellerNavItems.slice(0, 2);
-  const more = sellerNavItems.slice(2);
+  const primary = items.slice(0, 2);
+  const more = items.slice(2);
   const moreActive = more.some((i) => isItemActive(pathname, i));
 
   useEffect(() => setOpen(false), [pathname]);
 
   return (
-    <nav aria-label="Seller navigation" className="sticky bottom-0 z-30 mt-auto w-full border-t border-border/60 bg-surface/95 px-2 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl sm:px-4">
+    <nav aria-label={label} className="sticky bottom-0 z-30 mt-auto w-full border-t border-border/60 bg-surface/95 px-2 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl sm:px-4">
       {open && <button aria-label="Close menu" className="fixed inset-0 z-30 bg-black/40" onClick={() => setOpen(false)} />}
       {open && (
         <div className="absolute bottom-[calc(100%+0.5rem)] left-1/2 z-40 w-[min(20rem,calc(100%-1.5rem))] -translate-x-1/2 rounded-3xl border border-border/60 bg-surface p-2 shadow-card">
           {more.map((item) => {
             const Icon = item.icon;
             const active = isItemActive(pathname, item);
-            const showDot = item.to === "/seller/disputes" && hasOpenDispute;
+            const showDot = item.to === disputesPath && hasOpenDispute;
             return (
               <Link key={item.to} to={item.to}
                 className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold ${active ? "bg-gold/15 text-gold" : "hover:bg-surface-2"}`}>
@@ -110,14 +111,6 @@ function SellerBottomNav({ pathname }: { pathname: string }) {
 
 export function BottomNav({ variant = "buyer" }: { variant?: "buyer" | "seller" }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  if (variant === "seller") return <SellerBottomNav pathname={pathname} />;
-  return (
-    <nav aria-label="Main navigation" className="sticky bottom-0 z-30 mt-auto w-full border-t border-border/60 bg-surface/95 px-2 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl sm:px-4">
-      <ul className="grid grid-flow-col auto-cols-fr gap-1">
-        {buyerNavItems.map((item) => (
-          <li key={item.to} className="min-w-0"><NavLink item={item} pathname={pathname} /></li>
-        ))}
-      </ul>
-    </nav>
-  );
+  if (variant === "seller") return <MoreBottomNav pathname={pathname} items={sellerNavItems} disputesPath="/seller/disputes" label="Seller navigation" />;
+  return <MoreBottomNav pathname={pathname} items={buyerNavItems} disputesPath="/app/disputes" label="Main navigation" />;
 }
