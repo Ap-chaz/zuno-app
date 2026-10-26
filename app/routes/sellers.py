@@ -1,9 +1,11 @@
 # app/routes/sellers.py
 #
-# Public seller directory: lets a buyer find the seller they want to start a deal with.
-# Only active, phone-verified sellers are listed; nothing private (phone, email, id docs) is returned.
+# Public seller directory.
+# - Default (Verified Sellers screen): only sellers an admin has marked is_verified.
+# - ?all=1 (New Escrow dropdown): every active, phone-verified seller, so anyone can be dealt with.
+# Nothing private (phone, email, id docs) is returned.
 #
-# GET /api/sellers?q=&limit=      -> { sellers: [...], total }
+# GET /api/sellers?q=&limit=&all=  -> { sellers: [...], total }
 # GET /api/sellers/<id>           -> { seller: {...} }
 
 from flask import Blueprint, request, jsonify
@@ -49,8 +51,12 @@ def list_sellers():
     except ValueError:
         limit = 50
 
+    include_all = request.args.get('all') in ('1', 'true', 'yes')
+
     where = ["u.role = 'seller'", "u.is_active = TRUE", "u.phone_verified = TRUE",
              "COALESCE(r.is_visible_in_search, TRUE) = TRUE"]
+    if not include_all:
+        where.append("u.is_verified = TRUE")   # the directory is curated by admin
     params = []
     if q:
         where.append("(u.full_name LIKE %s OR u.business_name LIKE %s)")
