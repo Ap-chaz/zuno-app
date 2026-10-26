@@ -30,9 +30,17 @@ function mapSeller(r: Record<string, any>): Seller { // eslint-disable-line @typ
 export const SELLER_CATEGORIES = seedCategories;
 
 export const sellersService = {
+  /** Verified Sellers directory: only sellers an admin has listed. */
   async list(): Promise<Seller[]> {
-    if (env.useMockApi) return mockResolve([...MOCK_SELLERS]);
+    if (env.useMockApi) return mockResolve(MOCK_SELLERS.filter((s) => s.verified));
     const rows = await apiClient.getList<Record<string, any>>("/sellers", "sellers"); // eslint-disable-line @typescript-eslint/no-explicit-any
+    return rows.map(mapSeller);
+  },
+
+  /** Everyone a buyer may start a deal with (New Escrow dropdown). Not limited to verified sellers. */
+  async listAll(): Promise<Seller[]> {
+    if (env.useMockApi) return mockResolve([...MOCK_SELLERS]);
+    const rows = await apiClient.getList<Record<string, any>>("/sellers?all=1", "sellers"); // eslint-disable-line @typescript-eslint/no-explicit-any
     return rows.map(mapSeller);
   },
 

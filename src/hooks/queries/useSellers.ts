@@ -7,10 +7,11 @@ export const sellerKeys = {
   search: (query: string, category: string) => ["sellers", "search", query, category] as const,
 };
 
+/** Every seller a buyer can start a deal with (New Escrow dropdown). */
 export function useSellers() {
   return useQuery({
-    queryKey: sellerKeys.all,
-    queryFn: () => sellersService.list(),
+    queryKey: [...sellerKeys.all, "bookable"] as const,
+    queryFn: () => sellersService.listAll(),
   });
 }
 

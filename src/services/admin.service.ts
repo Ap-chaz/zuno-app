@@ -81,6 +81,10 @@ export const adminService = {
     if (env.useMockApi) return mockResolve(undefined);
     await apiClient.post(`/admin/users/${userId}/tier`, { tier, notes });
   },
+  async setListing(userId: string, listed: boolean) {
+    if (env.useMockApi) return mockResolve(undefined);
+    await apiClient.post(`/admin/users/${userId}/listing`, { listed });
+  },
   async suspend(userId: string, reason: string, days: number) {
     if (env.useMockApi) return mockResolve(undefined);
     await apiClient.post(`/admin/users/${userId}/suspend`, { reason, days });
