@@ -37,6 +37,9 @@ export interface AdminTransaction {
 }
 
 const n = (v: unknown) => Number(v ?? 0);
+const safeIso = (v: unknown): string => {
+  try { return toIso(v); } catch { return ""; }
+};
 
 export const adminService = {
   async kycQueue(): Promise<AdminKycItem[]> {
@@ -93,8 +96,8 @@ export const adminService = {
     return rows.map((p) => ({
       id: String(p.id), transactionId: p.transaction_id, type: p.payout_type, amount: n(p.amount),
       phone: p.mpesa_number, status: p.status, reference: p.mpesa_reference ?? undefined,
-      failureReason: p.failure_reason ?? undefined, attempts: n(p.attempts), createdAt: toIso(p.created_at),
-      completedAt: p.completed_at ? toIso(p.completed_at) : undefined,
+      failureReason: p.failure_reason ?? undefined, attempts: n(p.attempts), createdAt: safeIso(p.created_at),
+      completedAt: p.completed_at ? safeIso(p.completed_at) : undefined,
     }));
   },
   async retryPayout(id: string, confirmedNotPaid = false) {
