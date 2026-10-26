@@ -9,6 +9,7 @@ import { TopBar } from "@/components/zuno/TopBar";
 import { PhoneFrame } from "@/components/zuno/PhoneFrame";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/useAuth";
+import type { ZunoRole } from "@/types/models";
 
 const signupSchema = z.object({
   name: z.string().trim().min(2, "Enter your full name"),
@@ -17,7 +18,7 @@ const signupSchema = z.object({
     .trim()
     .min(9, "Enter a valid phone number")
     .regex(/^[+0-9\s-]+$/, "Digits only, please"),
-  email: z.string().trim().email("Enter a valid email address"),
+  email: z.string().trim().email("Enter a valid email address").or(z.literal("")),
   password: z.string().min(8, "Use at least 8 characters"),
   agree: z.literal(true, {
     errorMap: () => ({ message: "You must accept the Terms and Privacy Policy" }),
@@ -35,6 +36,7 @@ function Signup() {
   const navigate = useNavigate();
   const { signup } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [role, setRole] = useState<Exclude<ZunoRole, "admin">>("buyer");
   const {
     register,
     handleSubmit,
@@ -49,9 +51,8 @@ function Signup() {
 
   const onSubmit = async (values: SignupForm) => {
     try {
-      // Role is chosen on the next screen; default to buyer until then.
-      await signup({ name: values.name, email: values.email, phone: values.phone, password: values.password, role: "buyer" });
-      navigate({ to: "/auth/role" });
+      await signup({ name: values.name, email: values.email, phone: values.phone, password: values.password, role });
+      navigate({ to: "/auth/verify" });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't create your account. Try again.");
     }
@@ -62,6 +63,23 @@ function Signup() {
       <TopBar title="Sign Up" back="/" />
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-1 flex-col gap-3 px-6 pt-6">
         <p className="text-xs font-bold tracking-[0.2em] text-accent">CREATE ACCOUNT</p>
+
+        <div className="grid grid-cols-2 gap-2 rounded-2xl bg-surface p-1" role="radiogroup" aria-label="Account type">
+          {(["buyer", "seller"] as const).map((r) => (
+            <button
+              key={r}
+              type="button"
+              role="radio"
+              aria-checked={role === r}
+              onClick={() => setRole(r)}
+              className={`h-11 rounded-xl text-sm font-semibold transition-colors ${
+                role === r ? "bg-gradient-gold text-gold-foreground shadow-gold" : "text-muted-foreground"
+              }`}
+            >
+              {r === "buyer" ? "I'm a buyer" : "I'm a seller"}
+            </button>
+          ))}
+        </div>
 
         <Field icon={User} placeholder="Full Name" autoComplete="name" error={errors.name?.message} {...register("name")} />
         <Field icon={Phone} placeholder="Phone Number" type="tel" autoComplete="tel" error={errors.phone?.message} {...register("phone")} />
@@ -88,7 +106,7 @@ function Signup() {
         <label className="mt-2 flex items-start gap-2 text-xs text-muted-foreground">
           <Checkbox
             checked={agree === true}
-            onCheckedChange={(checked) => setValue("agree", checked === true, { shouldValidate: true })}
+            onCheckedChange={(checked) => setValue("agree", (checked === true) as true, { shouldValidate: true })}
             className="mt-0.5 border-gold data-[state=checked]:bg-gold data-[state=checked]:text-gold-foreground"
           />
           <span>

@@ -12,7 +12,7 @@ function SellerProtectedDealGate() {
   return (
     <div className="flex flex-1 flex-col overflow-y-auto">
       <TopBar title="Start a Protected Deal" back="/seller/safepay" />
-      <div className="flex flex-1 flex-col px-5 pt-4 pb-8">
+      <div className="flex flex-1 flex-col px-4 sm:px-6 pt-4 pb-8">
         <div className="rounded-3xl border border-border/40 bg-gradient-card p-6 shadow-card">
           <div className="grid h-12 w-12 place-items-center rounded-2xl bg-gold/15 text-gold">
             <ShieldCheck className="h-6 w-6" />

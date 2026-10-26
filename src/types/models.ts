@@ -11,8 +11,12 @@ export type TxStatus =
   | "Pending"
   | "Funded"
   | "Protected"
+  | "In transit"
+  | "Inspection"
   | "Completed"
   | "Refunded"
+  | "Resolved"
+  | "Cancelled"
   | "Disputed";
 
 export interface Transaction {
@@ -37,6 +41,18 @@ export interface Transaction {
    * "pending" for anything not yet in a payable state.
    */
   payoutStatus?: "pending" | "paid";
+  // ── Filled by the real API (all amounts are whole KES, calculated server-side) ──
+  buyerPays?: number;
+  sellerReceives?: number;
+  platformFee?: number;
+  buyerFeeShare?: number;
+  sellerFeeShare?: number;
+  deliveryMethod?: string;
+  trackingNumber?: string;
+  courierName?: string;
+  /** ISO time the buyer's inspection window closes (funds auto-release after this). */
+  inspectionEndsAt?: string;
+  mpesaReference?: string;
 }
 
 export type SellerVerificationTier = "unverified" | "pending" | "verified" | "flagged";
@@ -74,9 +90,9 @@ export interface Seller {
   };
 }
 
-export type KycStatus = "unverified" | "pending" | "verified";
+export type KycStatus = "unverified" | "pending" | "verified" | "rejected";
 
-export type ZunoRole = "buyer" | "seller";
+export type ZunoRole = "buyer" | "seller" | "admin";
 
 export interface User {
   id: string;
@@ -85,6 +101,10 @@ export interface User {
   phone?: string;
   role: ZunoRole;
   kycStatus: KycStatus;
+  /** Server-confirmed: the phone number was proven with an SMS code. */
+  phoneVerified: boolean;
+  /** 0 = unverified (small deals), 1 = KYC approved, 2 = business verified. */
+  sellerTier: number;
   trustScore: number;
   avatarInitial: string;
   createdAt: string;
@@ -135,7 +155,7 @@ export interface Notification {
   relatedId?: string;
 }
 
-export type DisputeStatus = "open" | "under_review" | "resolved" | "rejected";
+export type DisputeStatus = "open" | "negotiating" | "under_review" | "resolved" | "rejected";
 
 export interface Dispute {
   id: string;
@@ -147,6 +167,10 @@ export interface Dispute {
   evidenceUrls: string[];
   /** Set once an admin resolves the dispute — who the funds decision favored. */
   resolvedInFavorOf?: "buyer" | "seller";
+  /** Exact admin/negotiation outcome: REFUND_BUYER | RELEASE_TO_SELLER | SPLIT. */
+  resolution?: string;
+  splitBuyerAmount?: number;
+  splitSellerAmount?: number;
   /** Admin's note explaining the resolution, shown to both parties. */
   resolutionNote?: string;
   resolvedAt?: string;

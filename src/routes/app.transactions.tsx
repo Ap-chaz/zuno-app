@@ -105,7 +105,7 @@ function Activity() {
         }
       />
 
-      <div className="px-5 pt-4">
+      <div className="px-4 sm:px-6 pt-4">
         <label className="flex h-12 items-center gap-3 rounded-2xl border border-border/60 bg-input px-4 focus-within:border-gold/50">
           <Search className="h-4 w-4 text-muted-foreground" />
           <input
@@ -117,7 +117,7 @@ function Activity() {
         </label>
       </div>
 
-      <div className="mt-4 flex shrink-0 gap-2 overflow-x-auto px-5 pb-1 hide-scrollbar min-h-[38px]">
+      <div className="mt-4 flex shrink-0 gap-2 overflow-x-auto px-4 sm:px-6 pb-1 hide-scrollbar min-h-[38px]">
         {filters.map((f) => (
           <button
             key={f}
@@ -133,7 +133,7 @@ function Activity() {
         ))}
       </div>
 
-      <div className="mt-4 px-5 pb-6">
+      <div className="mt-4 px-4 sm:px-6 pb-6">
         {isLoading && <ListSkeleton rows={5} />}
         {isError && (
           <ErrorState description="Couldn't load your transactions." onRetry={() => refetch()} />

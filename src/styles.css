@@ -207,6 +207,23 @@
     background-color: var(--color-muted-foreground);
     background-clip: padding-box;
   }
+  /* Desktop dashboard density: everything is sized in rem, so lowering the
+     root size on large screens shrinks the whole app UI proportionally.
+     Scoped with :has() so the marketing site keeps its normal size. */
+  @media (min-width: 1024px) {
+    html:has([data-app-shell]) { font-size: 87.5%; } /* 14px */
+  }
+  @media (min-width: 1536px) {
+    html:has([data-app-shell]) { font-size: 93.75%; } /* 15px on very large screens */
+  }
+
+  /* Never let a stray wide child create a page-level horizontal scrollbar
+     (clip, unlike hidden, doesn't break position: sticky). */
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: clip;
+  }
   body {
     position: relative;
     isolation: isolate;
@@ -393,4 +410,19 @@
     transition-duration: 0.001ms !important;
   }
   .zuno-reveal { opacity: 1; transform: none; }
+}
+
+/* Dashboard (/app, /seller): hide scrollbars inside the app shell. Content
+   still scrolls with wheel, trackpad, touch and keyboard. Unlayered on
+   purpose so it wins over the themed scrollbar rules in @layer base. */
+[data-app-shell],
+[data-app-shell] * {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+[data-app-shell]::-webkit-scrollbar,
+[data-app-shell] *::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }

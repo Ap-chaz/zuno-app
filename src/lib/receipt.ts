@@ -50,7 +50,25 @@ function loadImage(src: string): Promise<HTMLImageElement | null> {
 }
 
 function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
-  const words = text.split(" ");
+  // Break words that are wider than the column on their own (long IDs, ISO
+  // timestamps, references) so they never run past the card edge.
+  const words: string[] = [];
+  for (const word of text.split(" ")) {
+    if (ctx.measureText(word).width <= maxWidth) {
+      words.push(word);
+      continue;
+    }
+    let chunk = "";
+    for (const ch of word) {
+      if (chunk && ctx.measureText(chunk + ch).width > maxWidth) {
+        words.push(chunk);
+        chunk = ch;
+      } else {
+        chunk += ch;
+      }
+    }
+    if (chunk) words.push(chunk);
+  }
   const lines: string[] = [];
   let line = "";
   for (const word of words) {

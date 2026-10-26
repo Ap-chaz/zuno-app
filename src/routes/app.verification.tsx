@@ -15,7 +15,7 @@ export function VerificationPage({ backTo = "/app/account" }: { backTo?: string 
     <div className="flex flex-1 flex-col overflow-y-auto">
       <TopBar title="Verification Center" back={backTo} />
 
-      <div className="px-5 pt-4 pb-8">
+      <div className="px-4 sm:px-6 pt-4 pb-8">
         {status === "verified" && (
           <div className="rounded-3xl border border-border/40 bg-gradient-card p-5 text-center shadow-card">
             <div className="mx-auto grid h-20 w-20 place-items-center rounded-3xl bg-success/15">

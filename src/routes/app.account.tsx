@@ -81,7 +81,7 @@ function Account() {
         <Row icon={HelpCircle} label="Help & support" to="/help" />
       </Section>
 
-      <div className="px-5 pb-8 pt-2">
+      <div className="px-4 sm:px-6 pb-8 pt-6">
         <button
           onClick={handleLogout}
           className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/10 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/15"
@@ -96,7 +96,7 @@ function Account() {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="mt-6 px-5">
+    <div className="mt-6 px-4 sm:px-6">
       <p className="mb-2 px-2 text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{title}</p>
       <ul className="divide-y divide-border/40 overflow-hidden rounded-2xl border border-border/40 bg-surface">{children}</ul>
     </div>

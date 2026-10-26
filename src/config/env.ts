@@ -15,8 +15,11 @@ function readBool(value: string | undefined, fallback: boolean): boolean {
 }
 
 export const env = {
-  /** Base URL for the backend API. Empty string in mock mode. */
-  apiBaseUrl: import.meta.env.VITE_API_BASE_URL ?? "",
+  /**
+   * Base URL for the backend API INCLUDING the /api prefix, no trailing slash,
+   * e.g. https://zuno-api.up.railway.app/api. Empty string in mock mode.
+   */
+  apiBaseUrl: ((import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "").replace(/\/+$/, ""),
 
   /**
    * When true (default in this prototype), all `services/*` calls resolve
@@ -38,13 +41,10 @@ export const env = {
     | "production",
 
   isProd: import.meta.env.PROD,
-
-  /**
-   * Stopgap passcode gating /admin/* routes until real admin authentication
-   * (separate login, roles, backend-enforced authorization) exists. This is
-   * a deterrent, not security — the passcode ships in the client bundle and
-   * anyone can read it from devtools. Do not rely on this once real money
-   * or real seller data is involved; replace with proper auth first.
-   */
-  adminPasscode: import.meta.env.VITE_ADMIN_PASSCODE ?? "",
 } as const;
+
+if (typeof window !== "undefined" && env.isProd && env.useMockApi && env.appEnv === "production") {
+  // Not fatal: the marketing site is served from this same build. But a production
+  // APP build running on mock data must never be mistaken for a real deployment.
+  console.warn("[ZUNO] Mock API is enabled in a production build (VITE_USE_MOCK_API).");
+}

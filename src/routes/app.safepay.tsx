@@ -14,7 +14,7 @@ export function SafePayPage({ backTo = "/app", startHref = "/app/new-escrow" }: 
       <TopBar title="SafePay Protection" back={backTo} />
 
 
-      <div className="px-5 pt-4 pb-8">
+      <div className="px-4 sm:px-6 pt-4 pb-8">
         <div className="overflow-hidden rounded-3xl border border-border/40 bg-gradient-card p-6 shadow-elevated">
           <div className="mx-auto grid h-24 w-24 place-items-center">
             <img src={zunoLogo} alt="ZUNO" className="h-full w-full object-contain" />

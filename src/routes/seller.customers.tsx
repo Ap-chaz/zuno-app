@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Search, BadgeCheck, Users, AlertTriangle } from "lucide-react";
+import { Search, Users, AlertTriangle } from "lucide-react";
 import { TopBar } from "@/components/zuno/TopBar";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/common/StateViews";
 import { currency } from "@/lib/zuno-data";
-import { useBuyers } from "@/hooks/queries/useBuyers";
+import { useTransactions } from "@/hooks/queries/useTransactions";
+import { displayDate, parseAnyDate } from "@/lib/api/mappers";
 import type { BuyerSummary } from "@/types/models";
 
 export const Route = createFileRoute("/seller/customers")({
@@ -16,7 +17,28 @@ export const Route = createFileRoute("/seller/customers")({
 // derived from transaction history, since there's no real multi-user table
 // or per-seller customer list yet. See buyers.service.ts for details.
 function Customers() {
-  const { data: buyers, isLoading, isError, refetch } = useBuyers();
+  const { data: transactions, isLoading, isError, refetch } = useTransactions();
+
+  // Your customers are the buyers on your own deals, grouped by name.
+  const buyers = useMemo<BuyerSummary[]>(() => {
+    const byName = new Map<string, BuyerSummary>();
+    for (const t of transactions ?? []) {
+      if (t.status === "Pending" || t.status === "Cancelled") continue; // nothing was paid
+      const name = t.buyerName ?? "Buyer";
+      const value = t.sellerReceives ?? t.amount;
+      const cur = byName.get(name);
+      if (cur) {
+        cur.transactionCount += 1;
+        cur.totalSpent += value;
+        if (t.status === "Disputed") cur.disputeCount += 1;
+        if (parseAnyDate(t.date) > parseAnyDate(cur.lastTransactionDate)) cur.lastTransactionDate = t.date;
+      } else {
+        byName.set(name, { name, transactionCount: 1, totalSpent: value, disputeCount: t.status === "Disputed" ? 1 : 0,
+          lastTransactionDate: t.date, suspended: false, kycStatus: "verified" });
+      }
+    }
+    return [...byName.values()].sort((a, b) => b.totalSpent - a.totalSpent);
+  }, [transactions]);
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
@@ -30,7 +52,7 @@ function Customers() {
     <div className="flex flex-1 flex-col overflow-y-auto">
       <TopBar title="Customers" />
 
-      <div className="px-5 pt-4">
+      <div className="px-4 sm:px-6 pt-4">
         <label className="flex h-12 items-center gap-3 rounded-2xl border border-border/60 bg-input px-4 focus-within:border-gold/50">
           <Search className="h-4 w-4 text-muted-foreground" />
           <input
@@ -42,7 +64,7 @@ function Customers() {
         </label>
       </div>
 
-      <div className="mt-4 px-5 pb-8">
+      <div className="mt-4 px-4 sm:px-6 pb-8">
         {isError ? (
           <ErrorState description="Couldn't load your customers." onRetry={() => refetch()} />
         ) : isLoading ? (
@@ -80,10 +102,10 @@ function CustomerRow({ customer: c }: { customer: BuyerSummary }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <p className="truncate font-semibold">{c.name}</p>
-            {c.kycStatus === "verified" && <BadgeCheck className="h-4 w-4 shrink-0 text-gold" aria-label="Verified buyer" />}
+            
           </div>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            <span className="font-semibold text-foreground">{c.transactionCount}</span> order{c.transactionCount === 1 ? "" : "s"} · Last {c.lastTransactionDate}
+            <span className="font-semibold text-foreground">{c.transactionCount}</span> order{c.transactionCount === 1 ? "" : "s"} · Last {displayDate(c.lastTransactionDate)}
           </p>
         </div>
         <div className="shrink-0 text-right">

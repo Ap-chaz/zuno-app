@@ -34,7 +34,7 @@ export async function isPlatformAuthenticatorAvailable(): Promise<boolean> {
   }
 }
 
-function randomBytes(length: number): Uint8Array {
+function randomBytes(length: number): Uint8Array<ArrayBuffer> {
   const arr = new Uint8Array(length);
   crypto.getRandomValues(arr);
   return arr;

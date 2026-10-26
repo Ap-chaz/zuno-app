@@ -21,9 +21,10 @@ import {
 import { toast } from "sonner";
 import { TopBar } from "@/components/zuno/TopBar";
 import { currency } from "@/lib/zuno-data";
+import { useTransactions } from "@/hooks/queries/useTransactions";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/hooks/useLanguage";
-import { getSellerVerificationTier } from "@/lib/seller-business-verification";
+import { useSellerTier } from "@/lib/seller-business-verification";
 import type { SellerVerificationTier } from "@/types/models";
 
 export const Route = createFileRoute("/seller/account")({
@@ -35,7 +36,10 @@ function SellerAccount() {
   const { user, logout } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const tier = getSellerVerificationTier();
+  const tier = useSellerTier();
+  const { data: txs } = useTransactions();
+  const deals = (txs ?? []).filter((x) => x.status === "Completed" || x.status === "Resolved");
+  const earnedTotal = deals.reduce((sum, x) => sum + (x.sellerReceives ?? x.amount), 0);
   const isBusiness = tier === "verified";
 
   const handleLogout = async () => {
@@ -52,15 +56,15 @@ function SellerAccount() {
       <div className="mx-5 mt-4 rounded-3xl border border-border/40 bg-gradient-card p-5 shadow-card">
         <div className="flex items-center gap-4">
           <div className="grid h-16 w-16 place-items-center rounded-2xl bg-gradient-gold text-2xl font-bold text-gold-foreground">
-            {isBusiness ? "Z" : getAvatarInitial(user)}
+            {getAvatarInitial(user)}
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
-              <p className="truncate text-lg font-semibold">{isBusiness ? "Zuri Boutique KE" : (user?.name ?? "Seller")}</p>
+              <p className="truncate text-lg font-semibold">{user?.name ?? "Seller"}</p>
               {isBusiness && <BadgeCheck className="h-4 w-4 text-gold" />}
             </div>
-            <p className="truncate text-xs text-muted-foreground">{isBusiness ? "hello@zuriboutique.co.ke" : (user?.email ?? "—")}</p>
-            <p className="truncate text-xs text-muted-foreground">{isBusiness ? "+254 720 118 442" : (user?.phone ?? "—")}</p>
+            <p className="truncate text-xs text-muted-foreground">{user?.email ?? "—"}</p>
+            <p className="truncate text-xs text-muted-foreground">{user?.phone ?? "—"}</p>
           </div>
           <Link
             to="/seller/settings"
@@ -73,15 +77,15 @@ function SellerAccount() {
 
         <div className="mt-4 grid grid-cols-3 gap-2 border-t border-border/40 pt-4 text-center">
           <div>
-            <p className="text-base font-bold">{isBusiness ? "4.9" : "4.7"}</p>
+            <p className="text-base font-bold">{user?.trustScore ? user.trustScore.toFixed(1) : "—"}</p>
             <p className="text-[10px] text-muted-foreground">Rating</p>
           </div>
           <div>
-            <p className="text-base font-bold">{isBusiness ? "328" : "9"}</p>
+            <p className="text-base font-bold">{deals.length}</p>
             <p className="text-[10px] text-muted-foreground">Deals</p>
           </div>
           <div>
-            <p className="text-base font-bold">{currency(isBusiness ? 1284500 : 86400)}</p>
+            <p className="text-base font-bold">{currency(earnedTotal)}</p>
             <p className="text-[10px] text-muted-foreground">Earned</p>
           </div>
         </div>
@@ -112,7 +116,7 @@ function SellerAccount() {
         <Row icon={FileText} label="Terms & conditions" to="/terms" external />
       </Section>
 
-      <div className="px-5 pb-8 pt-4">
+      <div className="px-4 sm:px-6 pb-8 pt-6">
         <button
           onClick={handleLogout}
           className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/10 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/15"
@@ -135,7 +139,7 @@ function VerificationBanner({ tier }: { tier: SellerVerificationTier }) {
         <ShieldCheck className="h-6 w-6 text-gold" />
         <div className="flex-1">
           <p className="text-sm font-semibold">Verification Status</p>
-          <p className="text-xs text-muted-foreground">KRA verified · Business docs pending</p>
+          <p className="text-xs text-muted-foreground">Business verified (Tier 2) · deals up to Ksh 1,000,000</p>
         </div>
         <ChevronRight className="h-4 w-4 text-muted-foreground" />
       </Link>
@@ -182,7 +186,7 @@ function VerificationBanner({ tier }: { tier: SellerVerificationTier }) {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="mt-6 px-5">
+    <div className="mt-6 px-4 sm:px-6">
       <p className="mb-2 px-2 text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
         {title}
       </p>

@@ -1,15 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { Wallet, ArrowDownToLine, ArrowUpFromLine, LogOut, Loader2, Check, Landmark, Smartphone } from "lucide-react";
+import { useState } from "react";
+import { LogOut, Loader2, RefreshCw, Check, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { PhoneFrame } from "@/components/zuno/PhoneFrame";
 import { TopBar } from "@/components/zuno/TopBar";
 import { AdminGate } from "@/components/zuno/AdminGate";
 import { adminLogout } from "@/lib/admin-auth";
-import { useTransactions, useMarkPayoutPaid } from "@/hooks/queries/useTransactions";
-import { useSellers } from "@/hooks/queries/useSellers";
-import { formatCurrency } from "@/services/transactions.service";
-import type { Transaction, Seller } from "@/types/models";
+import { errorMessage } from "@/lib/api/client";
+import { useAdminPayouts, useRetryPayout } from "@/hooks/queries/useAdmin";
+import type { AdminPayout } from "@/services/admin.service";
 
 export const Route = createFileRoute("/admin/payouts")({
   head: () => ({ meta: [{ title: "Payout & Refund Queue — ZUNO Admin" }] }),
@@ -20,226 +19,78 @@ export const Route = createFileRoute("/admin/payouts")({
   ),
 });
 
-// NOTE: "Mark as paid" only updates the record in mock data — it does not
-// actually send an M-Pesa/bank transfer. Until a real payment integration
-// exists, sending the money is a manual step someone does outside this
-// screen; this just tracks whether that manual step has happened.
+const fmt = (n: number) => `Ksh ${n.toLocaleString("en-KE")}`;
+const LABEL: Record<AdminPayout["type"], string> = {
+  SELLER_RELEASE: "Seller payout", BUYER_REFUND: "Buyer refund", SPLIT_SELLER: "Split · seller", SPLIT_BUYER: "Split · buyer",
+};
+
 function AdminPayouts() {
-  const { data: transactions, isLoading: loadingTx } = useTransactions();
-  const { data: sellers, isLoading: loadingSellers } = useSellers();
-  const [tab, setTab] = useState<"owed" | "paid">("owed");
-
-  const sellerById = useMemo(() => {
-    const map = new Map<string, Seller>();
-    sellers?.forEach((s) => map.set(s.id, s));
-    return map;
-  }, [sellers]);
-
-  const payouts = useMemo(() => {
-    if (!transactions) return [];
-    return transactions.filter((t) => t.status === "Completed");
-  }, [transactions]);
-
-  const refunds = useMemo(() => {
-    if (!transactions) return [];
-    return transactions.filter((t) => t.status === "Refunded");
-  }, [transactions]);
-
-  const owedPayouts = payouts.filter((t) => t.payoutStatus !== "paid");
-  const owedRefunds = refunds.filter((t) => t.payoutStatus !== "paid");
-  const paidPayouts = payouts.filter((t) => t.payoutStatus === "paid");
-  const paidRefunds = refunds.filter((t) => t.payoutStatus === "paid");
-
-  const totalOwedToSellers = owedPayouts.reduce((sum, t) => sum + t.amount, 0);
-  const totalOwedToBuyers = owedRefunds.reduce((sum, t) => sum + t.amount, 0);
-
-  const isLoading = loadingTx || loadingSellers;
-
+  const [tab, setTab] = useState<"open" | "COMPLETED">("open");
+  const { data, isLoading } = useAdminPayouts(tab === "COMPLETED" ? "COMPLETED" : undefined);
+  const needsAttention = data?.filter((p) => p.status === "FAILED" || p.status === "NEEDS_REVIEW") ?? [];
+  const rest = data?.filter((p) => p.status !== "FAILED" && p.status !== "NEEDS_REVIEW") ?? [];
   return (
     <PhoneFrame>
-      <TopBar
-        title="Payout & Refund Queue"
-        back="/admin"
-        right={
-          <button
-            type="button"
-            onClick={() => {
-              adminLogout();
-              window.location.reload();
-            }}
-            className="grid h-10 w-10 place-items-center rounded-xl bg-surface text-muted-foreground hover:bg-surface-2"
-            aria-label="Log out of admin"
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
-        }
-      />
-
+      <TopBar title="Payout & Refund Queue" back="/admin"
+        right={<button type="button" onClick={() => { adminLogout(); window.location.reload(); }}
+          className="grid h-10 w-10 place-items-center rounded-xl bg-surface text-muted-foreground hover:bg-surface-2" aria-label="Log out of admin">
+          <LogOut className="h-4 w-4" /></button>} />
       <div className="px-5 pt-4 pb-8">
-        <div className="mb-4 grid grid-cols-2 gap-2">
-          <div className="rounded-2xl border border-border/40 bg-surface p-3">
-            <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
-              <ArrowUpFromLine className="h-3 w-3" /> Owed to sellers
-            </p>
-            <p className="mt-1 text-lg font-bold text-gold">{formatCurrency(totalOwedToSellers)}</p>
-            <p className="text-[11px] text-muted-foreground">{owedPayouts.length} pending</p>
-          </div>
-          <div className="rounded-2xl border border-border/40 bg-surface p-3">
-            <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
-              <ArrowDownToLine className="h-3 w-3" /> Owed to buyers
-            </p>
-            <p className="mt-1 text-lg font-bold text-destructive">{formatCurrency(totalOwedToBuyers)}</p>
-            <p className="text-[11px] text-muted-foreground">{owedRefunds.length} pending</p>
-          </div>
-        </div>
-
+        <p className="mb-4 text-xs text-muted-foreground">
+          Payouts and refunds are sent to M-Pesa automatically. Only failed or unconfirmed ones need you.
+        </p>
         <div className="mb-4 flex gap-2">
-          <TabButton active={tab === "owed"} onClick={() => setTab("owed")} label="Pending" />
-          <TabButton active={tab === "paid"} onClick={() => setTab("paid")} label="Paid" />
+          {([["open", "In progress"], ["COMPLETED", "Paid"]] as const).map(([k, l]) => (
+            <button key={k} type="button" onClick={() => setTab(k)}
+              className={`h-9 flex-1 rounded-xl text-xs font-semibold ${tab === k ? "bg-gradient-gold text-gold-foreground" : "bg-surface text-muted-foreground"}`}>{l}</button>
+          ))}
         </div>
-
         {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
-
-        {tab === "owed" && !isLoading && (
+        {needsAttention.length > 0 && (
           <>
-            <SectionLabel label="SELLER PAYOUTS" />
-            <div className="space-y-2">
-              {owedPayouts.map((t) => (
-                <PayoutRow key={t.id} transaction={t} kind="payout" seller={sellerById.get(t.sellerId)} />
-              ))}
-              {owedPayouts.length === 0 && <EmptyNote text="No seller payouts pending." />}
-            </div>
-
-            <SectionLabel label="BUYER REFUNDS" className="mt-6" />
-            <div className="space-y-2">
-              {owedRefunds.map((t) => (
-                <PayoutRow key={t.id} transaction={t} kind="refund" seller={sellerById.get(t.sellerId)} />
-              ))}
-              {owedRefunds.length === 0 && <EmptyNote text="No buyer refunds pending." />}
-            </div>
+            <p className="mb-2 text-xs font-bold tracking-[0.18em] text-destructive">NEEDS ATTENTION</p>
+            <div className="mb-6 space-y-2">{needsAttention.map((p) => <Row key={p.id} p={p} />)}</div>
           </>
         )}
-
-        {tab === "paid" && !isLoading && (
-          <>
-            <SectionLabel label="SELLER PAYOUTS" />
-            <div className="space-y-2">
-              {paidPayouts.map((t) => (
-                <PayoutRow key={t.id} transaction={t} kind="payout" seller={sellerById.get(t.sellerId)} readOnly />
-              ))}
-              {paidPayouts.length === 0 && <EmptyNote text="No completed seller payouts yet." />}
-            </div>
-
-            <SectionLabel label="BUYER REFUNDS" className="mt-6" />
-            <div className="space-y-2">
-              {paidRefunds.map((t) => (
-                <PayoutRow key={t.id} transaction={t} kind="refund" seller={sellerById.get(t.sellerId)} readOnly />
-              ))}
-              {paidRefunds.length === 0 && <EmptyNote text="No completed buyer refunds yet." />}
-            </div>
-          </>
+        <div className="space-y-2">{rest.map((p) => <Row key={p.id} p={p} />)}</div>
+        {!isLoading && (data?.length ?? 0) === 0 && (
+          <p className="rounded-xl bg-surface p-3 text-center text-xs text-muted-foreground">Nothing here.</p>
         )}
       </div>
     </PhoneFrame>
   );
 }
 
-function TabButton({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`h-9 flex-1 rounded-xl text-xs font-semibold transition-colors ${
-        active ? "bg-gradient-gold text-gold-foreground" : "bg-surface text-muted-foreground"
-      }`}
-    >
-      {label}
-    </button>
-  );
-}
-
-function SectionLabel({ label, className = "" }: { label: string; className?: string }) {
-  return <p className={`mb-2 text-xs font-bold tracking-[0.18em] text-muted-foreground ${className}`}>{label}</p>;
-}
-
-function EmptyNote({ text }: { text: string }) {
-  return <p className="rounded-xl bg-surface p-3 text-center text-xs text-muted-foreground">{text}</p>;
-}
-
-function PayoutRow({
-  transaction: t,
-  kind,
-  seller,
-  readOnly = false,
-}: {
-  transaction: Transaction;
-  kind: "payout" | "refund";
-  seller?: Seller;
-  readOnly?: boolean;
-}) {
-  const markPaid = useMarkPayoutPaid();
-
-  function handleMarkPaid() {
-    markPaid.mutate(t.id, {
-      onSuccess: () => toast.success(kind === "payout" ? "Payout marked as sent." : "Refund marked as sent."),
-      onError: () => toast.error("Couldn't update this record."),
+function Row({ p }: { p: AdminPayout }) {
+  const retry = useRetryPayout();
+  const needsReview = p.status === "NEEDS_REVIEW";
+  const doRetry = () => {
+    if (needsReview && !confirm("Open the M-Pesa portal and confirm this payment was NOT sent. Retrying a payment that already went out will pay twice. Continue?")) return;
+    retry.mutate({ id: p.id, confirmedNotPaid: needsReview }, {
+      onSuccess: () => toast.success("Re-queued. It will be sent shortly."),
+      onError: (e) => toast.error(errorMessage(e)),
     });
-  }
-
-  const recipient = kind === "payout" ? t.seller : t.buyerName ?? "Unknown buyer";
-
+  };
   return (
     <article className="rounded-2xl border border-border/40 bg-surface p-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">{recipient}</p>
-          <p className="truncate text-xs text-muted-foreground">
-            {t.item} · <span className="font-mono">{t.id}</span>
-          </p>
+          <p className="text-sm font-semibold">{LABEL[p.type]}</p>
+          <p className="truncate text-xs text-muted-foreground"><span className="font-mono">{p.transactionId}</span> · {p.phone}</p>
         </div>
-        <span className="shrink-0 text-sm font-bold">{formatCurrency(t.amount)}</span>
+        <span className="shrink-0 text-sm font-bold">{fmt(p.amount)}</span>
       </div>
-
-      <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-        {kind === "payout" && seller?.payoutMethod ? (
-          <>
-            {seller.payoutMethod === "mpesa" ? (
-              <Smartphone className="h-3.5 w-3.5 text-gold" />
-            ) : (
-              <Landmark className="h-3.5 w-3.5 text-gold" />
-            )}
-            <span>
-              {seller.payoutMethod === "bank" ? `${seller.payoutBankName} · ` : ""}
-              {seller.payoutDetails}
-            </span>
-          </>
-        ) : kind === "payout" ? (
-          <span className="italic">No payout method on file — contact seller</span>
-        ) : (
-          <span className="italic">Refund via original payment method</span>
-        )}
-      </div>
-
-      {!readOnly && (
-        <button
-          type="button"
-          disabled={markPaid.isPending}
-          onClick={handleMarkPaid}
-          className="mt-3 flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-gradient-gold text-xs font-semibold text-gold-foreground disabled:opacity-50"
-        >
-          {markPaid.isPending ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <Wallet className="h-3.5 w-3.5" />
-          )}
-          Mark as {kind === "payout" ? "paid out" : "refunded"}
+      <p className="mt-1 text-[11px] text-muted-foreground">
+        {p.status.replace("_", " ")}{p.attempts ? ` · ${p.attempts} attempt${p.attempts > 1 ? "s" : ""}` : ""}{p.reference ? ` · ${p.reference}` : ""}
+      </p>
+      {p.failureReason && <p className="mt-1 flex items-start gap-1 text-xs text-destructive"><AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />{p.failureReason}</p>}
+      {(p.status === "FAILED" || needsReview) && (
+        <button type="button" disabled={retry.isPending} onClick={doRetry}
+          className="mt-3 flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-gradient-gold text-xs font-semibold text-gold-foreground disabled:opacity-50">
+          {retry.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />} Retry payout
         </button>
       )}
-      {readOnly && (
-        <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-success">
-          <Check className="h-3.5 w-3.5" /> {kind === "payout" ? "Paid out" : "Refunded"}
-        </p>
-      )}
+      {p.status === "COMPLETED" && <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-success"><Check className="h-3.5 w-3.5" /> Paid</p>}
     </article>
   );
 }

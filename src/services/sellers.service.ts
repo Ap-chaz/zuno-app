@@ -7,12 +7,33 @@ import type { Seller } from "@/types/models";
 // Adapts the shared seed data (see transactions.service.ts for the rationale).
 const MOCK_SELLERS: Seller[] = seedSellers;
 
+const PALETTE = ["#7c3aed", "#d4a017", "#0ea5e9", "#10b981", "#f43f5e", "#f97316"];
+
+function mapSeller(r: Record<string, any>): Seller { // eslint-disable-line @typescript-eslint/no-explicit-any
+  const name = String(r.display_name ?? r.business_name ?? r.full_name ?? "Seller");
+  const id = String(r.id);
+  return {
+    id,
+    name,
+    initials: name.split(/\s+/).map((w: string) => w[0]).slice(0, 2).join("").toUpperCase(),
+    rating: Number(r.average_rating ?? 0),
+    reviews: Number(r.total_ratings ?? 0),
+    category: "General",
+    verified: Boolean(r.is_verified),
+    verificationTier: r.is_verified ? "verified" : "unverified",
+    deals: Number(r.completed_transactions ?? 0),
+    tagline: String(r.bio ?? ""),
+    color: PALETTE[Number(id) % PALETTE.length],
+  };
+}
+
 export const SELLER_CATEGORIES = seedCategories;
 
 export const sellersService = {
   async list(): Promise<Seller[]> {
     if (env.useMockApi) return mockResolve([...MOCK_SELLERS]);
-    return apiClient.getAllPages<Seller>("/sellers");
+    const rows = await apiClient.getList<Record<string, any>>("/sellers", "sellers"); // eslint-disable-line @typescript-eslint/no-explicit-any
+    return rows.map(mapSeller);
   },
 
   async getById(id: string): Promise<Seller> {
@@ -21,7 +42,8 @@ export const sellersService = {
       if (!found) return mockReject(`Seller ${id} not found`, 404, "NOT_FOUND");
       return mockResolve(found);
     }
-    return apiClient.get<Seller>(`/sellers/${id}`);
+    const r = await apiClient.get<{ seller: Record<string, any> }>(`/sellers/${id}`); // eslint-disable-line @typescript-eslint/no-explicit-any
+    return mapSeller(r.seller);
   },
 
   async search(query: string, category = "All"): Promise<Seller[]> {
@@ -43,6 +65,9 @@ export const sellersService = {
       found.suspended = suspended;
       return mockResolve(found);
     }
-    return apiClient.patch<Seller>(`/sellers/${id}`, { suspended });
+    // Real suspension is an admin action on the user account.
+    if (suspended) await apiClient.post(`/admin/users/${id}/suspend`, { reason: "Suspended by admin", days: 30 });
+    else await apiClient.post(`/admin/users/${id}/unsuspend`);
+    return this.getById(id).catch(() => ({ id, suspended } as Seller));
   },
 };

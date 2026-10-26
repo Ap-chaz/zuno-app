@@ -1,16 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo } from "react";
 import { ShieldCheck, AlertTriangle, Receipt, Wallet, BarChart3, Users, LogOut, Clock, TrendingUp, BadgeCheck, LifeBuoy, Bell } from "lucide-react";
 import { PhoneFrame } from "@/components/zuno/PhoneFrame";
 import { TopBar } from "@/components/zuno/TopBar";
 import { AdminGate } from "@/components/zuno/AdminGate";
 import { adminLogout } from "@/lib/admin-auth";
-import { useSellers } from "@/hooks/queries/useSellers";
-import { useDisputes } from "@/hooks/queries/useDisputes";
-import { useTransactions } from "@/hooks/queries/useTransactions";
+import { useAdminMetrics } from "@/hooks/queries/useAdmin";
 import { formatCurrency } from "@/services/transactions.service";
 
-const PLATFORM_FEE_RATE = 0.015;
 
 export const Route = createFileRoute("/admin/")({
   head: () => ({ meta: [{ title: "Admin — ZUNO" }] }),
@@ -22,23 +18,14 @@ export const Route = createFileRoute("/admin/")({
 });
 
 function AdminHome() {
-  const { data: sellers } = useSellers();
-  const { data: disputes } = useDisputes();
-  const { data: transactions } = useTransactions();
-
-  const stats = useMemo(() => {
-    const pendingVerifications = sellers?.filter((s) => s.verificationTier === "pending").length ?? 0;
-    const openDisputes = disputes?.filter((d) => d.status === "open" || d.status === "under_review").length ?? 0;
-    const totalVolume = transactions?.reduce((sum, t) => sum + t.amount, 0) ?? 0;
-    const completedVolume =
-      transactions?.filter((t) => t.status === "Completed").reduce((sum, t) => sum + t.amount, 0) ?? 0;
-    const estRevenue = Math.round(completedVolume * PLATFORM_FEE_RATE);
-    const payoutsOwed =
-      transactions
-        ?.filter((t) => (t.status === "Completed" || t.status === "Refunded") && t.payoutStatus !== "paid")
-        .reduce((sum, t) => sum + t.amount, 0) ?? 0;
-    return { pendingVerifications, openDisputes, totalVolume, estRevenue, payoutsOwed };
-  }, [sellers, disputes, transactions]);
+  const { data: m } = useAdminMetrics();
+  const stats = {
+    pendingVerifications: m?.pendingKyc ?? 0,
+    openDisputes: m?.openDisputes ?? 0,
+    totalVolume: m?.inEscrow ?? 0,
+    estRevenue: m?.revenue ?? 0,
+    payoutsOwed: m?.disputed ?? 0,
+  };
 
   return (
     <PhoneFrame>
@@ -79,23 +66,23 @@ function AdminHome() {
             value={String(stats.openDisputes)}
             accent={stats.openDisputes > 0 ? "destructive" : "muted"}
           />
-          <StatCard icon={TrendingUp} label="Total volume" value={formatCurrency(stats.totalVolume)} accent="muted" />
-          <StatCard icon={Wallet} label="Est. revenue" value={formatCurrency(stats.estRevenue)} accent="success" />
+          <StatCard icon={TrendingUp} label="Held in escrow" value={formatCurrency(stats.totalVolume)} accent="muted" />
+          <StatCard icon={Wallet} label="Fee revenue" value={formatCurrency(stats.estRevenue)} accent="success" />
           <StatCard
             icon={Clock}
-            label="Payouts owed"
-            value={formatCurrency(stats.payoutsOwed)}
-            accent={stats.payoutsOwed > 0 ? "gold" : "muted"}
+            label="Disputed deals"
+            value={String(stats.payoutsOwed)}
+            accent={stats.payoutsOwed > 0 ? "destructive" : "muted"}
             wide
           />
         </div>
 
         <div className="space-y-3">
           <AdminLink
-            to="/admin/sellers"
+            to="/admin/kyc"
             icon={ShieldCheck}
-            title="Seller Verification Queue"
-            desc="Approve, flag, or reject seller business verification submissions"
+            title="KYC Review Queue"
+            desc="Approve or reject seller identity documents"
           />
           <AdminLink
             to="/admin/disputes"
@@ -107,13 +94,13 @@ function AdminHome() {
             to="/admin/transactions"
             icon={Receipt}
             title="Transaction Monitoring"
-            desc="Search, filter, override status, flag for fraud, and export CSV"
+            desc="Search and filter every deal on the platform"
           />
           <AdminLink
             to="/admin/payouts"
             icon={Wallet}
             title="Payout & Refund Queue"
-            desc="Track seller payouts and buyer refunds owed, mark as sent"
+            desc="Watch automatic M-Pesa payouts; retry failed ones"
           />
           <AdminLink
             to="/admin/buyers"

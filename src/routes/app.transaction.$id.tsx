@@ -10,6 +10,7 @@ import { useTransaction } from "@/hooks/queries/useTransactions";
 import { useSeller } from "@/hooks/queries/useSellers";
 import { useAuth } from "@/hooks/useAuth";
 import { formatCurrency, statusColorClass } from "@/services/transactions.service";
+import { formatDateNairobi } from "@/lib/api/mappers";
 import type { ReceiptData } from "@/lib/receipt";
 
 export const Route = createFileRoute("/app/transaction/$id")({
@@ -22,13 +23,15 @@ function buildReceiptData(
   buyerName?: string,
 ): ReceiptData {
   const escrowFee = Math.round(tx.amount * 0.015);
+  // tx.date can be a raw ISO timestamp; show a readable Nairobi-time date instead.
+  const date = /^\d{4}-\d{2}-\d{2}T/.test(tx.date) ? formatDateNairobi(tx.date, true) : tx.date;
   return {
     id: tx.id,
     kind: "payment",
-    dateLabel: tx.date,
+    dateLabel: date,
     greetingName: buyerName,
     rows: [
-      { label: "Date", value: tx.date },
+      { label: "Date", value: date },
       { label: "Seller", value: tx.seller },
       { label: "Item", value: tx.item },
       { label: "Category", value: tx.category },
@@ -65,7 +68,7 @@ function TxDetail() {
     return (
       <div className="flex flex-1 flex-col overflow-y-auto">
         <TopBar title="Receipt" back="/app/transactions" />
-        <div className="space-y-4 px-5 pt-4">
+        <div className="space-y-4 px-4 sm:px-6 pt-4">
           <CardSkeleton className="h-40" />
           <CardSkeleton className="h-32" />
           <CardSkeleton className="h-20" />
@@ -78,7 +81,7 @@ function TxDetail() {
     return (
       <div className="flex flex-1 flex-col overflow-y-auto">
         <TopBar title="Receipt" back="/app/transactions" />
-        <div className="px-5 pt-6">
+        <div className="px-4 sm:px-6 pt-6">
           <ErrorState
             title="Transaction not found"
             description="This receipt may have moved or doesn't exist."
@@ -99,7 +102,7 @@ function TxDetail() {
     <div className="flex flex-1 flex-col overflow-y-auto">
       <TopBar title="Receipt" back="/app/transactions" />
 
-      <div className="px-5 pt-4">
+      <div className="px-4 sm:px-6 pt-4">
         <div className="overflow-hidden rounded-3xl border border-border/40 bg-gradient-card p-6 shadow-card">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold tracking-[0.18em] text-muted-foreground">

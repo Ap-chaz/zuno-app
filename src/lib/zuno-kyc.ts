@@ -2,7 +2,7 @@
 // In production this MUST be mirrored on the backend — every transaction
 // endpoint should refuse requests from users whose KYC status !== "verified".
 
-export type KycStatus = "unverified" | "pending" | "verified";
+export type KycStatus = "unverified" | "pending" | "verified" | "rejected";
 
 const STATUS_KEY = "zuno_kyc_status";
 const DRAFT_KEY = "zuno_kyc_draft";
@@ -51,28 +51,47 @@ export function markKycPromptSeen() {
   } catch {}
 }
 
-export function getKycStatus(): KycStatus {
+function storedUser(): { role?: string; kycStatus?: string; phoneVerified?: boolean } | null {
   const w = safeWindow();
-  if (!w) return "unverified";
+  if (!w) return null;
   try {
-    const v = w.localStorage.getItem(scoped(STATUS_KEY));
-    return v === "verified" || v === "pending" ? v : "unverified";
+    const raw = w.localStorage.getItem("zuno_auth_user");
+    return raw ? JSON.parse(raw) : null;
   } catch {
-    return "unverified";
+    return null;
   }
 }
 
+/** Seller identity-check status as last reported by the server (refreshed on every app load). */
+export function getKycStatus(): KycStatus {
+  const v = storedUser()?.kycStatus;
+  return v === "verified" || v === "pending" || v === "rejected" ? (v as KycStatus) : "unverified";
+}
+
+/**
+ * May this person transact? Sellers need an approved KYC; buyers need a verified phone number.
+ * This only decides what the UI shows. The API enforces the same rules on every request,
+ * so editing browser storage cannot unlock anything real.
+ */
 export function isKycVerified(): boolean {
+  const u = storedUser();
+  if (!u) return false;
+  if (u.role === "buyer") return Boolean(u.phoneVerified);
   return getKycStatus() === "verified";
 }
 
+/** Mock-mode helper only: in real mode the server decides, and `authService.me()` refreshes the value. */
 export function setKycStatus(status: KycStatus) {
   const w = safeWindow();
   if (!w) return;
   try {
-    w.localStorage.setItem(scoped(STATUS_KEY), status);
-    // Draft no longer needed once verified.
+    const raw = w.localStorage.getItem("zuno_auth_user");
+    if (!raw) return;
+    const user = JSON.parse(raw);
+    user.kycStatus = status;
+    w.localStorage.setItem("zuno_auth_user", JSON.stringify(user));
     if (status === "verified") w.sessionStorage.removeItem(scoped(DRAFT_KEY));
+    w.dispatchEvent(new Event("zuno:user-updated"));
   } catch {}
 }
 
