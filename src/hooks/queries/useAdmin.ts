@@ -23,6 +23,7 @@ export const useReviewKyc = () =>
   useAdminMutation((a: { id: string; decision: "APPROVED" | "REJECTED"; notes: string; reason?: string }) =>
     adminService.reviewKyc(a.id, a.decision, a.notes, a.reason));
 export const useSetTier = () => useAdminMutation((a: { id: string; tier: 1 | 2; notes: string }) => adminService.setTier(a.id, a.tier, a.notes));
+export const useSetListing = () => useAdminMutation((a: { id: string; listed: boolean }) => adminService.setListing(a.id, a.listed));
 export const useSuspend = () => useAdminMutation((a: { id: string; reason: string; days: number }) => adminService.suspend(a.id, a.reason, a.days));
 export const useUnsuspend = () => useAdminMutation((id: string) => adminService.unsuspend(id));
 export const useRetryPayout = () => useAdminMutation((a: { id: string; confirmedNotPaid?: boolean }) => adminService.retryPayout(a.id, a.confirmedNotPaid));

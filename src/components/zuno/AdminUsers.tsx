@@ -5,7 +5,7 @@ import { PhoneFrame } from "@/components/zuno/PhoneFrame";
 import { TopBar } from "@/components/zuno/TopBar";
 import { adminLogout } from "@/lib/admin-auth";
 import { errorMessage } from "@/lib/api/client";
-import { useAdminUsers, useSetTier, useSuspend, useUnsuspend } from "@/hooks/queries/useAdmin";
+import { useAdminUsers, useSetListing, useSetTier, useSuspend, useUnsuspend } from "@/hooks/queries/useAdmin";
 import type { AdminUser } from "@/services/admin.service";
 
 export function AdminUsers({ role, title }: { role: "buyer" | "seller"; title: string }) {
@@ -37,7 +37,8 @@ function UserRow({ u }: { u: AdminUser }) {
   const suspend = useSuspend();
   const unsuspend = useUnsuspend();
   const setTier = useSetTier();
-  const busy = suspend.isPending || unsuspend.isPending || setTier.isPending;
+  const setListing = useSetListing();
+  const busy = suspend.isPending || unsuspend.isPending || setTier.isPending || setListing.isPending;
   const suspended = !u.active;
   const onErr = (e: unknown) => toast.error(errorMessage(e));
 
@@ -47,6 +48,11 @@ function UserRow({ u }: { u: AdminUser }) {
     const days = Number(prompt("Suspend for how many days? (1-365)", "30"));
     if (!days || days < 1 || days > 365) return toast.error("Enter 1 to 365 days.");
     suspend.mutate({ id: u.id, reason: reason.trim(), days }, { onSuccess: () => toast.success("Account suspended."), onError: onErr });
+  };
+  const toggleListing = () => {
+    const listed = !u.verified;
+    if (!confirm(listed ? `Show ${u.businessName || u.name} in the Verified Sellers directory?` : `Hide ${u.businessName || u.name} from the Verified Sellers directory?`)) return;
+    setListing.mutate({ id: u.id, listed }, { onSuccess: () => toast.success(listed ? "Seller is now listed." : "Seller hidden from directory."), onError: onErr });
   };
   const doTier = () => {
     const notes = prompt("Tier 2 raises this seller's deal limit to Ksh 1,000,000. Note what you verified (e.g. business registration, KRA PIN):");
@@ -73,6 +79,10 @@ function UserRow({ u }: { u: AdminUser }) {
       </div>
       {suspended && <p className="mt-2 text-xs text-destructive">Suspended: {u.suspensionReason ?? "—"}{u.suspendedUntil ? ` until ${new Date(u.suspendedUntil).toLocaleDateString("en-GB")}` : ""}</p>}
       <div className="mt-3 flex gap-2">
+        {u.role === "seller" && (
+          <button type="button" disabled={busy} onClick={toggleListing} className="h-9 flex-1 rounded-lg bg-gold/15 text-xs font-semibold text-gold disabled:opacity-50">
+            {u.verified ? "Hide from directory" : "Verify & list"}</button>
+        )}
         {u.role === "seller" && u.tier === 1 && (
           <button type="button" disabled={busy} onClick={doTier} className="h-9 flex-1 rounded-lg bg-gold/15 text-xs font-semibold text-gold disabled:opacity-50">
             Upgrade to Tier 2</button>

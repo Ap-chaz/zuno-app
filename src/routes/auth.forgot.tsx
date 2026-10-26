@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Phone, Loader2, KeyRound } from "lucide-react";
+import { Phone, Loader2, KeyRound, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { TopBar } from "@/components/zuno/TopBar";
 import { PhoneFrame } from "@/components/zuno/PhoneFrame";
@@ -18,12 +18,18 @@ function Forgot() {
   const [sent, setSent] = useState(false);
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  // Signed-in users arrive from Settings > Change password, so Back returns there.
+  let signedIn = false;
+  try { signedIn = Boolean(localStorage.getItem("zuno_auth_token")); } catch { /* storage unavailable */ }
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
     if (code.trim().length < 4) return toast.error("Enter the code from the SMS.");
     if (password.length < 8) return toast.error("Use a password of at least 8 characters.");
+    if (password !== confirmPassword) return toast.error("The two passwords do not match.");
     setIsSubmitting(true);
     try {
       await authService.resetPassword({ phone: identifier.trim(), code: code.trim(), newPassword: password });
@@ -57,7 +63,7 @@ function Forgot() {
 
   return (
     <PhoneFrame>
-      <TopBar title="Forgot Password" back="/auth/login" />
+      <TopBar title="Forgot Password" back={signedIn ? "/app/settings" : "/auth/login"} />
       <div className="flex flex-1 flex-col px-6 pt-6">
         {sent ? (
           <form onSubmit={handleReset} noValidate className="flex flex-1 flex-col">
@@ -68,8 +74,21 @@ function Forgot() {
               className="mt-6 h-14 rounded-2xl border border-border/60 bg-input px-4 text-sm outline-none focus:border-gold/50" />
             <label className="mt-3 flex h-14 items-center gap-3 rounded-2xl border border-border/60 bg-input px-4 focus-within:border-gold/50">
               <KeyRound className="h-4 w-4 text-muted-foreground" />
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="New password (8+ characters)"
+              <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="New password (8+ characters)"
                 autoComplete="new-password" className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground" />
+              <button type="button" onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? "Hide password" : "Show password"} className="text-muted-foreground">
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </label>
+            <label className="mt-3 flex h-14 items-center gap-3 rounded-2xl border border-border/60 bg-input px-4 focus-within:border-gold/50">
+              <KeyRound className="h-4 w-4 text-muted-foreground" />
+              <input type={showPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm new password"
+                autoComplete="new-password" className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground" />
+              <button type="button" onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? "Hide password" : "Show password"} className="text-muted-foreground">
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </label>
             <button type="submit" disabled={isSubmitting}
               className="mt-auto mb-8 flex h-14 items-center justify-center gap-2 rounded-2xl bg-gradient-gold text-base font-semibold text-gold-foreground shadow-gold disabled:opacity-60">

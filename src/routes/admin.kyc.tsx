@@ -20,7 +20,7 @@ export const Route = createFileRoute("/admin/kyc")({
 });
 
 function AdminKyc() {
-  const { data: queue, isLoading } = useAdminKyc();
+  const { data: queue, isLoading, isError, error, refetch } = useAdminKyc();
   return (
     <PhoneFrame>
       <TopBar title="KYC & Compliance" back="/admin"
@@ -32,9 +32,15 @@ function AdminKyc() {
           Compare the ID photos and selfie with the details entered. Approving makes the seller Tier 1. Rejected sellers can resubmit.
         </p>
         {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
+        {isError && (
+          <div className="mb-3 rounded-xl bg-surface p-3 text-center text-xs text-destructive">
+            <p>Could not load KYC submissions: {String((error as Error)?.message ?? error)}</p>
+            <button type="button" onClick={() => refetch()} className="mt-2 font-semibold underline">Try again</button>
+          </div>
+        )}
         <div className="space-y-3">
           {queue?.map((k) => <KycCard key={k.id} item={k} />)}
-          {!isLoading && (queue?.length ?? 0) === 0 && (
+          {!isLoading && !isError && (queue?.length ?? 0) === 0 && (
             <p className="rounded-xl bg-surface p-3 text-center text-xs text-muted-foreground">Nothing pending review.</p>
           )}
         </div>
