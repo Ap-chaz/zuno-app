@@ -24,7 +24,7 @@ const fmt = (n: number) => `Ksh ${n.toLocaleString("en-KE")}`;
 function AdminTransactions() {
   const [status, setStatus] = useState("");
   const [q, setQ] = useState("");
-  const { data, isLoading } = useAdminTransactions(status || undefined, q.trim() || undefined);
+  const { data, isLoading, isError, error, refetch } = useAdminTransactions(status || undefined, q.trim() || undefined);
   return (
     <PhoneFrame>
       <TopBar title="Transaction Monitoring" back="/admin"
@@ -42,6 +42,12 @@ function AdminTransactions() {
           {STATUSES.map((s) => <option key={s} value={s}>{s ? s.replace("_", " ") : "All statuses"}</option>)}
         </select>
         {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
+        {isError && (
+          <div className="mb-3 rounded-xl bg-surface p-3 text-center text-xs text-destructive">
+            <p>Could not load transactions: {String((error as Error)?.message ?? error)}</p>
+            <button type="button" onClick={() => refetch()} className="mt-2 font-semibold underline">Try again</button>
+          </div>
+        )}
         <div className="space-y-2">
           {data?.map((t) => (
             <article key={t.id} className="rounded-2xl border border-border/40 bg-surface p-3">
@@ -59,7 +65,7 @@ function AdminTransactions() {
               </div>
             </article>
           ))}
-          {!isLoading && (data?.length ?? 0) === 0 && <p className="rounded-xl bg-surface p-3 text-center text-xs text-muted-foreground">No transactions.</p>}
+          {!isLoading && !isError && (data?.length ?? 0) === 0 && <p className="rounded-xl bg-surface p-3 text-center text-xs text-muted-foreground">No transactions.</p>}
         </div>
       </div>
     </PhoneFrame>
