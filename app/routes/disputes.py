@@ -475,7 +475,7 @@ def get_my_disputes():
         SELECT d.id, d.transaction_id, d.raised_by_role, d.category, d.description,
                d.preferred_resolution, d.status, d.resolution,
                d.split_buyer_amount, d.split_seller_amount, d.evidence_deadline,
-               d.resolution_deadline, d.resolved_at, d.created_at,
+               d.resolution_deadline, d.resolved_at, d.created_at, d.admin_notes,
                t.item_name, t.amount
         FROM disputes d
         JOIN transactions t ON t.id = d.transaction_id
