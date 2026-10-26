@@ -51,6 +51,12 @@ def send_sms(phone_number, message):
     to fail because of it. The transaction is more important
     than the notification. We log the failure and move on.
     """
+    # Local testing only: with no Africa's Talking key, show the SMS in the
+    # API window instead of sending it. Real sending resumes once the key is set.
+    if not os.getenv('AT_API_KEY'):
+        print(f"[SMS DEV - not sent] To {phone_number}: {message}")
+        return True
+
     try:
         # Convert to international format if needed
         if phone_number.startswith('0'):
