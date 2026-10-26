@@ -9,7 +9,6 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } f
 import { adminLogout } from "@/lib/admin-auth";
 import { useAdminTransactions } from "@/hooks/queries/useAdmin";
 import { formatCurrency } from "@/services/transactions.service";
-import type { TxStatus } from "@/types/models";
 
 export const Route = createFileRoute("/admin/analytics")({
   head: () => ({ meta: [{ title: "Analytics — ZUNO Admin" }] }),
@@ -54,7 +53,7 @@ function AdminAnalytics() {
         return {
           date: `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`,
           amount: t.buyerPays,
-          status: (STATUS_LABEL[t.status] ?? "Pending") as TxStatus,
+          status: STATUS_LABEL[t.status] ?? t.status,
           category: "All deals",
           seller: t.seller,
         };
@@ -76,8 +75,9 @@ function AdminAnalytics() {
 
   const byStatus = useMemo(() => {
     if (!transactions) return [];
-    const order: TxStatus[] = ["Pending", "Funded", "Protected", "Completed", "Refunded", "Disputed"];
-    const map = new Map<TxStatus, number>();
+    // Every stage of a deal, in order, so In transit / Inspection / Resolved are counted too.
+    const order = ["Pending", "Funded", "In transit", "Inspection", "Completed", "Refunded", "Resolved", "Disputed", "Cancelled"];
+    const map = new Map<string, number>();
     order.forEach((s) => map.set(s, 0));
     transactions.forEach((t) => map.set(t.status, (map.get(t.status) ?? 0) + 1));
     return order.map((status) => ({ status, count: map.get(status) ?? 0 }));
