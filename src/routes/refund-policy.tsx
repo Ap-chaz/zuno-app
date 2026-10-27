@@ -29,7 +29,7 @@ export const Route = createFileRoute("/refund-policy")({
           <h2>3. Platform fees</h2>
           <p>The ZUNO platform fee is non-refundable once a transaction is released to the seller. Where a dispute is resolved in the buyer's favor, the fee tied to that transaction is refunded along with the escrow amount.</p>
           <h2>4. How a refund is paid out</h2>
-          <p>Refunds are returned to the same payment method used to fund the escrow — M-Pesa, card, bank transfer, or wallet balance, depending on how the buyer paid. Processing typically completes within 1–5 business days, depending on the payment method and, for card refunds, the buyer's bank.</p>
+          <p>Refunds are returned to the same payment method used to fund the escrow — M-Pesa. Processing typically completes within 1–5 business days.</p>
           <h2>5. Partial refunds</h2>
           <p>Where a buyer keeps part of an order and returns the rest, or where a seller and buyer agree to a partial resolution, ZUNO can release a partial amount to each party as agreed in writing during a dispute or directly between the two parties.</p>
           <h2>6. What isn't covered</h2>
