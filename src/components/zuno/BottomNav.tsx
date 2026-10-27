@@ -112,5 +112,14 @@ function MoreBottomNav({ pathname, items, disputesPath, label }: { pathname: str
 export function BottomNav({ variant = "buyer" }: { variant?: "buyer" | "seller" }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   if (variant === "seller") return <MoreBottomNav pathname={pathname} items={sellerNavItems} disputesPath="/seller/disputes" label="Seller navigation" />;
-  return <MoreBottomNav pathname={pathname} items={buyerNavItems} disputesPath="/app/disputes" label="Main navigation" />;
+  // Buyer phone layout: three plain tabs (Home, Sellers, Tracking). Disputes lives in the Quick actions on Home.
+  return (
+    <nav aria-label="Main navigation" className="sticky bottom-0 z-30 mt-auto w-full border-t border-border/60 bg-surface/95 px-2 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl sm:px-4">
+      <ul className="grid grid-cols-3 gap-1">
+        {buyerNavItems.slice(0, 3).map((item) => (
+          <li key={item.to} className="min-w-0"><NavLink item={item} pathname={pathname} /></li>
+        ))}
+      </ul>
+    </nav>
+  );
 }
