@@ -13,9 +13,9 @@ export const Route = createFileRoute("/help")({
 
 const faqs = [
   { q: "How does ZUNO escrow work?", a: "You pay into ZUNO, we hold the funds, the seller delivers, then you confirm and the seller is paid. Funds are never released early." },
-  { q: "What if my item never arrives?", a: "Open a dispute within the protection window. ZUNO investigates within 24 hours and refunds you in full if the seller fails to deliver." },
+  { q: "What if my item never arrives?", a: "Open a dispute within the protection window. ZUNO investigates within 48 hours and refunds you in full if the seller fails to deliver." },
   { q: "How are sellers verified?", a: "Every seller goes through national ID verification, biometric selfie match, and business document checks before going live." },
-  { q: "What are the fees?", a: "ZUNO charges a small escrow fee (typically 1.5%) on the buyer side. Sellers pay no fees on payouts." },
+  { q: "What are the fees?", a: "ZUNO charges a small escrow fee (typically 1.25%) on the buyer side and 1.25% on the seller side" },
   { q: "Is my money safe?", a: "Funds are held in licensed partner banks under regulated custody with full audit trails." },
 ];
 
