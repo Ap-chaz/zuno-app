@@ -57,11 +57,10 @@ function Home() {
   return (
     <div className="flex-1 overflow-y-auto pb-6">
       {/* Header — logo shown only on mobile (sidebar already carries the brand on desktop) */}
-      <header className="relative flex items-center justify-between px-4 pt-4 sm:px-6 sm:pt-6 lg:px-0 lg:pt-0">
+      <header className="flex items-center justify-between px-4 pt-4 sm:px-6 sm:pt-6 lg:px-0 lg:pt-0">
         <div className="lg:hidden">
           <Logo />
         </div>
-        <span className="pointer-events-none absolute inset-x-0 bottom-2 text-center text-sm font-semibold sm:hidden">Home</span>
         <div className="hidden lg:block">
           <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
             {timeOfDayGreeting()}, {firstName} 👋
@@ -102,7 +101,7 @@ function Home() {
           <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-gold/15 blur-3xl max-sm:hidden" />
           <div className="absolute -bottom-16 left-6 h-32 w-32 rounded-full bg-accent/25 blur-3xl max-sm:hidden" />
 
-          <div className="relative flex items-center gap-2 text-xs font-semibold tracking-[0.2em] text-muted-foreground max-sm:order-2 max-sm:mt-1">
+          <div className="relative flex items-center gap-2 text-xs font-semibold tracking-[0.2em] text-muted-foreground max-sm:hidden">
             {t("home_protected_in_escrow").toUpperCase()}
           </div>
           <p className="relative mt-1 break-words text-4xl font-bold tracking-tight max-sm:order-1 sm:mt-3 lg:text-5xl">{mask(formatCurrency(protectedTotal))}</p>
@@ -200,23 +199,27 @@ function ActiveOrderCard({ order }: { order: Transaction }) {
     <Link
       to="/app/transaction/$id"
       params={{ id: order.id }}
-      className="block rounded-3xl border border-border/40 bg-surface p-4 shadow-card transition-colors active:bg-surface-2"
+      className="block rounded-2xl border border-border/40 bg-surface p-3.5 shadow-card transition-colors active:bg-surface-2"
     >
-      <div className="flex items-start justify-between gap-2">
-        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-gold/15 text-gold">
+      <div className="flex items-center gap-3">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gold/15 text-gold">
           <Package className="h-5 w-5" />
         </span>
-        <span className={`inline-block rounded-full border px-2 py-0.5 text-[10px] font-semibold ${statusColorClass(order.status)}`}>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold">{order.item}</p>
+          <p className="truncate text-xs text-muted-foreground">{order.seller}</p>
+        </div>
+        <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${statusColorClass(order.status)}`}>
           {order.status}
         </span>
       </div>
-      <p className="mt-3 truncate text-sm font-semibold">{order.item}</p>
-      <p className="truncate text-xs text-muted-foreground">{order.seller}</p>
-      <p className="mt-3 text-xl font-bold">{formatCurrency(order.amount)}</p>
-      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-surface-2">
+      <div className="mt-3 flex items-baseline justify-between gap-2">
+        <p className="text-base font-bold">{formatCurrency(order.amount)}</p>
+        <p className="truncate text-[10px] text-muted-foreground">{progress.label}</p>
+      </div>
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-2">
         <div className="h-full rounded-full bg-gold" style={{ width: progress.pct }} />
       </div>
-      <p className="mt-1.5 text-[10px] text-muted-foreground">{progress.label}</p>
     </Link>
   );
 }
