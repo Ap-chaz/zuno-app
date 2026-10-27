@@ -44,6 +44,14 @@ function buildReceiptData(
   };
 }
 
+/** "M-PESA · +2547********": shows only the first 4 digits of the account phone. */
+function mpesaMethodLabel(phone?: string): string {
+  let digits = (phone ?? "").replace(/\D/g, "");
+  if (digits.startsWith("0")) digits = `254${digits.slice(1)}`;
+  if (digits.length < 9) return "M-PESA";
+  return `M-PESA · +${digits.slice(0, 4)}${"*".repeat(digits.length - 4)}`;
+}
+
 function TxDetail() {
   const { id } = Route.useParams();
   const { data: tx, isLoading, isError, refetch } = useTransaction(id);
@@ -139,7 +147,7 @@ function TxDetail() {
             </button>
           </Row>
           <Row label="Date" value={displayDate(tx.date)} />
-          <Row label="Method" value="M-PESA · +254 714 637 437" />
+          <Row label="Method" value={mpesaMethodLabel(user?.phone)} />
           <Row label="Escrow fee (your half)" value={formatCurrency(tx.buyerFeeShare ?? 0)} />
           <Row label="Category" value={tx.category} />
         </dl>
