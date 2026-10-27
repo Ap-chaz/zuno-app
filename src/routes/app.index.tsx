@@ -11,6 +11,7 @@ import { formatCurrency, statusColorClass } from "@/services/transactions.servic
 import { useHideBalances } from "@/hooks/useHideBalances";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/hooks/useLanguage";
+import { displayDate } from "@/lib/api/mappers";
 import type { Transaction } from "@/types/models";
 
 export const Route = createFileRoute("/app/")({
@@ -174,7 +175,7 @@ function TransactionRow({ order }: { order: Transaction }) {
       <div className="min-w-0">
         <p className="truncate text-sm font-semibold">{order.item}</p>
         <p className="truncate text-xs text-muted-foreground">
-          {order.seller} · {order.date}
+          {order.seller} · {displayDate(order.date)}
         </p>
       </div>
       <div className="min-w-0 max-w-[9rem] text-right">

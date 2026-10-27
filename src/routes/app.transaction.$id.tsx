@@ -10,7 +10,7 @@ import { useTransaction } from "@/hooks/queries/useTransactions";
 import { useSeller } from "@/hooks/queries/useSellers";
 import { useAuth } from "@/hooks/useAuth";
 import { formatCurrency, statusColorClass } from "@/services/transactions.service";
-import { formatDateNairobi } from "@/lib/api/mappers";
+import { displayDate, formatDateNairobi } from "@/lib/api/mappers";
 import type { ReceiptData } from "@/lib/receipt";
 
 export const Route = createFileRoute("/app/transaction/$id")({
@@ -22,7 +22,7 @@ function buildReceiptData(
   tx: NonNullable<ReturnType<typeof useTransaction>["data"]>,
   buyerName?: string,
 ): ReceiptData {
-  const escrowFee = Math.round(tx.amount * 0.015);
+  const escrowFee = tx.buyerFeeShare ?? 0;
   // tx.date can be a raw ISO timestamp; show a readable Nairobi-time date instead.
   const date = /^\d{4}-\d{2}-\d{2}T/.test(tx.date) ? formatDateNairobi(tx.date, true) : tx.date;
   return {
@@ -39,9 +39,17 @@ function buildReceiptData(
       { label: "Escrow fee", value: formatCurrency(escrowFee) },
     ],
     totalLabel: "Total paid",
-    totalValue: formatCurrency(tx.amount),
+    totalValue: formatCurrency(tx.buyerPays ?? tx.amount),
     note: "This is a receipt of payment into ZUNO escrow, not proof of delivery. Funds are released to the seller only after delivery is confirmed.",
   };
+}
+
+/** "M-PESA · +2547********": shows only the first 4 digits of the account phone. */
+function mpesaMethodLabel(phone?: string): string {
+  let digits = (phone ?? "").replace(/\D/g, "");
+  if (digits.startsWith("0")) digits = `254${digits.slice(1)}`;
+  if (digits.length < 9) return "M-PESA";
+  return `M-PESA · +${digits.slice(0, 4)}${"*".repeat(digits.length - 4)}`;
 }
 
 function TxDetail() {
@@ -114,7 +122,7 @@ function TxDetail() {
               {tx.status}
             </span>
           </div>
-          <p className="mt-3 text-4xl font-bold">{formatCurrency(tx.amount)}</p>
+          <p className="mt-3 text-4xl font-bold">{formatCurrency(tx.buyerPays ?? tx.amount)}</p>
           <div className="mt-4 flex items-center gap-2 rounded-2xl border border-accent/30 bg-accent/10 px-3 py-2">
             <Shield className="h-4 w-4 text-accent" />
             <p className="text-xs font-medium text-accent">Protected by ZUNO</p>
@@ -138,9 +146,9 @@ function TxDetail() {
               )}
             </button>
           </Row>
-          <Row label="Date" value={tx.date} />
-          <Row label="Method" value="M-PESA · +254 714 637 437" />
-          <Row label="Escrow fee" value={formatCurrency(Math.round(tx.amount * 0.015))} />
+          <Row label="Date" value={displayDate(tx.date)} />
+          <Row label="Method" value={mpesaMethodLabel(user?.phone)} />
+          <Row label="Escrow fee (your half)" value={formatCurrency(tx.buyerFeeShare ?? 0)} />
           <Row label="Category" value={tx.category} />
         </dl>
 

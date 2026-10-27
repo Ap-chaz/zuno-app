@@ -14,6 +14,7 @@ import {
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/common/StateViews";
 import { useTransactions } from "@/hooks/queries/useTransactions";
 import { formatCurrency, statusColorClass } from "@/services/transactions.service";
+import { displayDate } from "@/lib/api/mappers";
 import type { TxStatus } from "@/types/models";
 
 const filters: ("All" | TxStatus)[] = [
@@ -164,7 +165,7 @@ function Activity() {
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold">{t.item}</p>
                     <p className="truncate text-xs text-muted-foreground">
-                      {t.seller} · {t.date}
+                      {t.seller} · {displayDate(t.date)}
                     </p>
                   </div>
                   <div className="text-right">
