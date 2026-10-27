@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { getAvatarInitial, getFirstName } from "@/lib/user-display";
-import { Bell, PlayCircle, ArrowUpRight, ShieldCheck, Package, FilePlus, Inbox, AlertTriangle } from "lucide-react";
+import { Bell, PlayCircle, ArrowUpRight, ArrowDownRight, ShieldCheck, Package, FilePlus, Inbox, AlertTriangle } from "lucide-react";
 import { Logo } from "@/components/zuno/Logo";
 import { ThemeToggle } from "@/components/zuno/ThemeToggle";
 import { EmptyState, ListSkeleton } from "@/components/common/StateViews";
@@ -11,7 +11,7 @@ import { formatCurrency, statusColorClass } from "@/services/transactions.servic
 import { useHideBalances } from "@/hooks/useHideBalances";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/hooks/useLanguage";
-import type { Transaction, TxStatus } from "@/types/models";
+import type { Transaction } from "@/types/models";
 
 export const Route = createFileRoute("/app/")({
   head: () => ({ meta: [{ title: "Home — ZUNO" }] }),
@@ -20,19 +20,6 @@ export const Route = createFileRoute("/app/")({
 
 /** Dashboard shows a preview only; the full list lives on /app/track. */
 const MAX_ACTIVE_PREVIEW = 4;
-
-const PROGRESS_BY_STATUS: Record<TxStatus, { pct: string; label: string }> = {
-  Pending: { pct: "25%", label: "Awaiting funding" },
-  Funded: { pct: "50%", label: "Funds secured" },
-  Protected: { pct: "75%", label: "In transit" },
-  "In transit": { pct: "75%", label: "On the way" },
-  Inspection: { pct: "90%", label: "Inspect and approve" },
-  Disputed: { pct: "60%", label: "Under review" },
-  Resolved: { pct: "100%", label: "Settled" },
-  Cancelled: { pct: "0%", label: "Cancelled" },
-  Completed: { pct: "100%", label: "Delivered" },
-  Refunded: { pct: "0%", label: "Refunded" },
-};
 
 function timeOfDayGreeting() {
   const hour = new Date().getHours();
@@ -135,12 +122,10 @@ function Home() {
             </div>
           ) : (
             <>
-              {/* Phones: swipeable cards with the next one peeking in. sm and up: the plain list. */}
-              <ul className="-mx-4 mt-3 flex snap-x snap-mandatory scroll-pl-4 gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:block sm:divide-y sm:divide-border/40 sm:overflow-hidden sm:rounded-3xl sm:border sm:border-border/40 sm:bg-surface sm:px-0 sm:pb-0">
+              <ul className="mt-3 divide-y divide-border/40 rounded-3xl border border-border/40 bg-surface max-sm:rounded-none max-sm:border-0 max-sm:bg-transparent">
                 {activeOrders!.slice(0, MAX_ACTIVE_PREVIEW).map((order) => (
-                  <li key={order.id} className="w-[85%] shrink-0 snap-start sm:w-auto sm:shrink">
-                    <div className="sm:hidden"><ActiveOrderCard order={order} /></div>
-                    <div className="hidden sm:block"><ActiveOrderRow order={order} /></div>
+                  <li key={order.id}>
+                    <ActiveOrderRow order={order} />
                   </li>
                 ))}
               </ul>
@@ -165,25 +150,9 @@ function Home() {
               <EmptyState icon={Inbox} title="No transactions yet" description="Your escrow payments will appear here." />
             </div>
           ) : (
-            <ul className="mt-3 divide-y divide-border/40 rounded-3xl border border-border/40 bg-surface max-sm:rounded-none max-sm:border-0 max-sm:bg-transparent">
-              {recent.map((t) => (
-                <li key={t.id}>
-                  <Link to="/app/transaction/$id" params={{ id: t.id }} className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-3.5 transition-colors hover:bg-surface-2">
-                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-surface-2 text-lg">📱</span>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold">{t.item}</p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {t.seller} · {t.date}
-                      </p>
-                    </div>
-                    <div className="min-w-0 max-w-[9rem] text-right">
-                      <p className="text-sm font-bold">{formatCurrency(t.amount)}</p>
-                      <span className={`mt-1 inline-block rounded-full border px-2 py-0.5 text-[10px] font-semibold ${statusColorClass(t.status)}`}>
-                        {t.status}
-                      </span>
-                    </div>
-                  </Link>
-                </li>
+            <ul className="mt-3 space-y-2">
+              {recent.map((tx) => (
+                <RecentActivityRow key={tx.id} t={tx} />
               ))}
             </ul>
           )}
@@ -193,67 +162,54 @@ function Home() {
   );
 }
 
-function ActiveOrderCard({ order }: { order: Transaction }) {
-  const progress = PROGRESS_BY_STATUS[order.status];
+/** Active Orders row: icon, item and seller · date, amount with a status badge. */
+function ActiveOrderRow({ order }: { order: Transaction }) {
   return (
     <Link
       to="/app/transaction/$id"
       params={{ id: order.id }}
-      className="block rounded-2xl border border-border/40 bg-surface p-3.5 shadow-card transition-colors active:bg-surface-2"
+      className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-3.5 transition-colors hover:bg-surface-2 active:bg-surface-2"
     >
-      <div className="flex items-center gap-3">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gold/15 text-gold">
-          <Package className="h-5 w-5" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">{order.item}</p>
-          <p className="truncate text-xs text-muted-foreground">{order.seller}</p>
-        </div>
-        <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${statusColorClass(order.status)}`}>
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-surface-2 text-lg">📱</span>
+      <div className="min-w-0">
+        <p className="truncate text-sm font-semibold">{order.item}</p>
+        <p className="truncate text-xs text-muted-foreground">
+          {order.seller} · {order.date}
+        </p>
+      </div>
+      <div className="min-w-0 max-w-[9rem] text-right">
+        <p className="text-sm font-bold">{formatCurrency(order.amount)}</p>
+        <span className={`mt-1 inline-block rounded-full border px-2 py-0.5 text-[10px] font-semibold ${statusColorClass(order.status)}`}>
           {order.status}
         </span>
-      </div>
-      <div className="mt-3 flex items-baseline justify-between gap-2">
-        <p className="text-base font-bold">{formatCurrency(order.amount)}</p>
-        <p className="truncate text-[10px] text-muted-foreground">{progress.label}</p>
-      </div>
-      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-2">
-        <div className="h-full rounded-full bg-gold" style={{ width: progress.pct }} />
       </div>
     </Link>
   );
 }
 
-function ActiveOrderRow({ order }: { order: Transaction }) {
-  const progress = PROGRESS_BY_STATUS[order.status];
+/** Recent Transactions row: same look as the seller's Recent activity (separate card, round arrow icon, plain status text). */
+function RecentActivityRow({ t }: { t: Transaction }) {
+  const up = t.status !== "Refunded";
   return (
-    <Link
-      to="/app/transaction/$id"
-      params={{ id: order.id }}
-      className="block px-4 py-3.5 transition-colors hover:bg-surface-2 active:bg-surface-2"
-    >
-      <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3">
-        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-gold/15 text-gold">
-          <Package className="h-5 w-5" />
+    <li>
+      <Link
+        to="/app/transaction/$id"
+        params={{ id: t.id }}
+        className="grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-2xl border border-border/40 bg-surface p-3.5 transition-colors hover:bg-surface-2"
+      >
+        <span className={`grid h-10 w-10 place-items-center rounded-2xl ${up ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"}`}>
+          {up ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
         </span>
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">{order.item}</p>
-          <p className="truncate text-xs text-muted-foreground">{order.seller}</p>
+          <p className="truncate text-sm font-semibold">{t.item}</p>
+          <p className="truncate text-xs text-muted-foreground">{t.seller}</p>
         </div>
         <div className="min-w-0 max-w-[9rem] text-right">
-          <p className="text-sm font-bold">{formatCurrency(order.amount)}</p>
-          <span className={`mt-1 inline-block rounded-full border px-2 py-0.5 text-[10px] font-semibold ${statusColorClass(order.status)}`}>
-            {order.status}
-          </span>
+          <p className={`text-sm font-bold ${up ? "" : "text-destructive"}`}>{formatCurrency(t.amount)}</p>
+          <p className="text-[10px] text-muted-foreground">{t.status}</p>
         </div>
-      </div>
-      <div className="mt-3 flex items-center gap-2 pl-[3.5rem]">
-        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-2">
-          <div className="h-full rounded-full bg-gold" style={{ width: progress.pct }} />
-        </div>
-        <span className="w-20 shrink-0 truncate text-right text-[10px] sm:w-24 text-muted-foreground">{progress.label}</span>
-      </div>
-    </Link>
+      </Link>
+    </li>
   );
 }
 
