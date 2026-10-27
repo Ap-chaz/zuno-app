@@ -122,11 +122,9 @@ function Home() {
             </div>
           ) : (
             <>
-              <ul className="mt-3 divide-y divide-border/40 rounded-3xl border border-border/40 bg-surface max-sm:rounded-none max-sm:border-0 max-sm:bg-transparent">
+              <ul className="mt-3 space-y-2">
                 {activeOrders!.slice(0, MAX_ACTIVE_PREVIEW).map((order) => (
-                  <li key={order.id}>
-                    <ActiveOrderRow order={order} />
-                  </li>
+                  <ActivityCard key={order.id} t={order} />
                 ))}
               </ul>
               {activeOrders!.length > MAX_ACTIVE_PREVIEW && (
@@ -150,9 +148,11 @@ function Home() {
               <EmptyState icon={Inbox} title="No transactions yet" description="Your escrow payments will appear here." />
             </div>
           ) : (
-            <ul className="mt-3 space-y-2">
+            <ul className="mt-3 divide-y divide-border/40 rounded-3xl border border-border/40 bg-surface max-sm:rounded-none max-sm:border-0 max-sm:bg-transparent">
               {recent.map((tx) => (
-                <RecentActivityRow key={tx.id} t={tx} />
+                <li key={tx.id}>
+                  <TransactionRow order={tx} />
+                </li>
               ))}
             </ul>
           )}
@@ -162,8 +162,8 @@ function Home() {
   );
 }
 
-/** Active Orders row: icon, item and seller · date, amount with a status badge. */
-function ActiveOrderRow({ order }: { order: Transaction }) {
+/** List row: icon, item and seller · date, amount with a status badge. */
+function TransactionRow({ order }: { order: Transaction }) {
   return (
     <Link
       to="/app/transaction/$id"
@@ -187,8 +187,8 @@ function ActiveOrderRow({ order }: { order: Transaction }) {
   );
 }
 
-/** Recent Transactions row: same look as the seller's Recent activity (separate card, round arrow icon, plain status text). */
-function RecentActivityRow({ t }: { t: Transaction }) {
+/** Card: same look as the seller's Recent activity (separate card, round arrow icon, plain status text). */
+function ActivityCard({ t }: { t: Transaction }) {
   const up = t.status !== "Refunded";
   return (
     <li>
