@@ -44,7 +44,7 @@ function Home() {
   return (
     <div className="flex-1 overflow-y-auto pb-6">
       {/* Header — logo shown only on mobile (sidebar already carries the brand on desktop) */}
-      <header className="flex items-center justify-between px-4 pt-4 sm:px-6 sm:pt-6 lg:px-0 lg:pt-0">
+      <header className="flex items-center justify-between px-4 pt-6 sm:px-6 lg:px-0 lg:pt-0">
         <div className="lg:hidden">
           <Logo />
         </div>
@@ -78,22 +78,22 @@ function Home() {
         </div>
       </header>
 
-      <p className="mt-3 px-4 text-center text-sm sm:mt-5 sm:text-left text-muted-foreground sm:px-6 lg:hidden">
+      <p className="mt-5 px-4 text-sm text-muted-foreground sm:px-6 lg:hidden">
         {timeOfDayGreeting()}, {firstName} 👋
       </p>
 
       {/* Balance card */}
-      <section className="mx-4 mt-2 overflow-hidden rounded-3xl border border-border/40 bg-gradient-card p-4 shadow-card max-sm:border-0 max-sm:p-0 max-sm:shadow-none max-sm:[background:none] sm:mx-6 sm:p-6 lg:mx-0 lg:mt-6 lg:p-8">
-        <div className="relative max-sm:flex max-sm:flex-col max-sm:items-center">
-          <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-gold/15 blur-3xl max-sm:hidden" />
-          <div className="absolute -bottom-16 left-6 h-32 w-32 rounded-full bg-accent/25 blur-3xl max-sm:hidden" />
+      <section className="mx-4 mt-3 overflow-hidden rounded-3xl border border-border/40 bg-gradient-card p-5 shadow-card sm:mx-6 sm:p-6 lg:mx-0 lg:mt-6 lg:p-8">
+        <div className="relative">
+          <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-gold/15 blur-3xl" />
+          <div className="absolute -bottom-16 left-6 h-32 w-32 rounded-full bg-accent/25 blur-3xl" />
 
-          <div className="relative flex items-center gap-2 text-xs font-semibold tracking-[0.2em] text-muted-foreground max-sm:hidden">
+          <div className="relative flex items-center gap-2 text-xs font-semibold tracking-[0.2em] text-muted-foreground">
             {t("home_protected_in_escrow").toUpperCase()}
           </div>
-          <p className="relative mt-1 break-words text-4xl font-bold tracking-tight max-sm:order-1 sm:mt-3 lg:text-5xl">{mask(formatCurrency(protectedTotal))}</p>
+          <p className="relative mt-3 break-words text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">{mask(formatCurrency(protectedTotal))}</p>
 
-          <div className="relative mt-4 grid w-full grid-cols-3 gap-2 border-t border-border/40 pt-3 text-center max-sm:order-3 sm:mt-6 sm:text-left sm:pt-4 sm:gap-3 lg:mt-8 lg:max-w-md lg:gap-6 lg:pt-6">
+          <div className="relative mt-5 grid grid-cols-3 gap-2 border-t border-border/40 pt-4 sm:mt-6 sm:gap-3 lg:mt-8 lg:max-w-md lg:gap-6 lg:pt-6">
             <Stat label={t("home_trust_score")} value={`${user?.trustScore ?? 0} / 1000`} />
             <Stat label={t("home_active")} value={`${activeOrders?.length ?? 0} deals`} />
             <Stat label={t("home_completed")} value={`${(transactions ?? []).filter((tx) => tx.status === "Completed").length}`} />
@@ -102,7 +102,7 @@ function Home() {
       </section>
 
       {/* Quick actions */}
-      <section className="mt-5 grid grid-cols-4 gap-2 px-4 sm:mt-6 sm:gap-3 sm:gap-4 sm:px-6 lg:mt-6 lg:px-0">
+      <section className="mt-6 grid grid-cols-4 gap-3 px-4 sm:gap-4 sm:px-6 lg:mt-6 lg:px-0">
         <Action to="/app/new-escrow" icon={FilePlus} label="New escrow" />
         <Action to="/app/disputes" icon={AlertTriangle} label="Disputes" dot={hasOpenDispute} />
         <Action to="/app/safepay" icon={ShieldCheck} label="SafePay" />
@@ -111,7 +111,7 @@ function Home() {
 
       {/* Main content: active orders + recent transactions become a two-column
           dashboard layout on wide screens instead of one long mobile-style stack. */}
-      <div className="mt-5 px-4 sm:mt-7 sm:px-6 lg:mt-8 lg:px-0 xl:grid xl:grid-cols-5 xl:gap-8">
+      <div className="mt-7 px-4 sm:px-6 lg:mt-8 lg:px-0 xl:grid xl:grid-cols-5 xl:gap-8">
         <section className="min-w-0 xl:col-span-3">
           <SectionHeader title={t("home_active_orders")} to="/app/track" seeAllLabel={t("home_see_all")} />
           {loadingActive ? (
@@ -228,7 +228,7 @@ function Action({ to, icon: Icon, label, dot }: { to: string; icon: typeof FileP
       to={to}
       className="flex flex-col items-center gap-2 rounded-full lg:flex-row lg:justify-center lg:gap-3 lg:border lg:border-border/40 lg:bg-surface lg:px-4 lg:py-3 lg:transition-colors lg:hover:border-gold/40 lg:hover:bg-surface-2"
     >
-      <span className="relative grid h-12 w-12 place-items-center rounded-full border sm:h-14 sm:w-14 border-border/40 bg-surface text-gold max-sm:border-0 max-sm:bg-gradient-gold max-sm:text-gold-foreground transition-colors hover:bg-surface-2 lg:h-10 lg:w-10 lg:shrink-0 lg:border-0 lg:bg-gold/15 lg:hover:bg-gold/25">
+      <span className="relative grid h-14 w-14 place-items-center rounded-full border border-border/40 bg-surface text-gold transition-colors hover:bg-surface-2 lg:h-10 lg:w-10 lg:shrink-0 lg:border-0 lg:bg-gold/15 lg:hover:bg-gold/25">
         <Icon className="h-5 w-5" />
         {dot && <span className="absolute right-0 top-0 h-3 w-3 rounded-full border-2 border-background bg-destructive" aria-label="Needs attention" />}
       </span>
