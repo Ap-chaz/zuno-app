@@ -39,7 +39,7 @@ function buildReceiptData(
       { label: "Escrow fee", value: formatCurrency(escrowFee) },
     ],
     totalLabel: "Total paid",
-    totalValue: formatCurrency(tx.amount),
+    totalValue: formatCurrency(tx.buyerPays ?? tx.amount),
     note: "This is a receipt of payment into ZUNO escrow, not proof of delivery. Funds are released to the seller only after delivery is confirmed.",
   };
 }
@@ -114,7 +114,7 @@ function TxDetail() {
               {tx.status}
             </span>
           </div>
-          <p className="mt-3 text-4xl font-bold">{formatCurrency(tx.amount)}</p>
+          <p className="mt-3 text-4xl font-bold">{formatCurrency(tx.buyerPays ?? tx.amount)}</p>
           <div className="mt-4 flex items-center gap-2 rounded-2xl border border-accent/30 bg-accent/10 px-3 py-2">
             <Shield className="h-4 w-4 text-accent" />
             <p className="text-xs font-medium text-accent">Protected by ZUNO</p>
