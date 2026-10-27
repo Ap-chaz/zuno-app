@@ -22,7 +22,7 @@ function buildReceiptData(
   tx: NonNullable<ReturnType<typeof useTransaction>["data"]>,
   buyerName?: string,
 ): ReceiptData {
-  const escrowFee = Math.round(tx.amount * 0.015);
+  const escrowFee = tx.buyerFeeShare ?? 0;
   // tx.date can be a raw ISO timestamp; show a readable Nairobi-time date instead.
   const date = /^\d{4}-\d{2}-\d{2}T/.test(tx.date) ? formatDateNairobi(tx.date, true) : tx.date;
   return {
@@ -140,7 +140,7 @@ function TxDetail() {
           </Row>
           <Row label="Date" value={displayDate(tx.date)} />
           <Row label="Method" value="M-PESA · +254 714 637 437" />
-          <Row label="Escrow fee" value={formatCurrency(Math.round(tx.amount * 0.015))} />
+          <Row label="Escrow fee (your half)" value={formatCurrency(tx.buyerFeeShare ?? 0)} />
           <Row label="Category" value={tx.category} />
         </dl>
 
