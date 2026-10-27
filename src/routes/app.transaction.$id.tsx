@@ -10,7 +10,7 @@ import { useTransaction } from "@/hooks/queries/useTransactions";
 import { useSeller } from "@/hooks/queries/useSellers";
 import { useAuth } from "@/hooks/useAuth";
 import { formatCurrency, statusColorClass } from "@/services/transactions.service";
-import { formatDateNairobi } from "@/lib/api/mappers";
+import { displayDate, formatDateNairobi } from "@/lib/api/mappers";
 import type { ReceiptData } from "@/lib/receipt";
 
 export const Route = createFileRoute("/app/transaction/$id")({
@@ -138,7 +138,7 @@ function TxDetail() {
               )}
             </button>
           </Row>
-          <Row label="Date" value={tx.date} />
+          <Row label="Date" value={displayDate(tx.date)} />
           <Row label="Method" value="M-PESA · +254 714 637 437" />
           <Row label="Escrow fee" value={formatCurrency(Math.round(tx.amount * 0.015))} />
           <Row label="Category" value={tx.category} />
