@@ -148,6 +148,7 @@ function DisputeCard({ dispute, open = false }: { dispute: Dispute; open?: boole
             <button type="button" disabled={resolve.isPending || !d} onClick={() => decide("SPLIT")}
               className="h-10 rounded-xl bg-surface-2 px-4 text-xs font-semibold disabled:opacity-50">Split</button>
           </div>
+          <button type="button" onClick={() => setExpanded(false)} className="w-full py-1.5 text-center text-xs text-muted-foreground hover:text-foreground">Cancel</button>
         </div>
       )}
     </article>

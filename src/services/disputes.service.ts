@@ -5,32 +5,6 @@ import { env } from "@/config/env";
 import { mapDispute, toIso } from "@/lib/api/mappers";
 import type { Dispute } from "@/types/models";
 
-const MOCK_DISPUTES: Dispute[] = [
-  {
-    id: "d1",
-    transactionId: "ZUNO9DF8GH7JK6",
-    reason: "Item not as described",
-    description: "The drone arrived with a different battery than advertised.",
-    status: "under_review",
-    createdAt: "2026-05-20T09:00:00.000Z",
-    evidenceUrls: [],
-  },
-];
-
-/** UI reason titles → API categories. */
-const REASON_TO_CATEGORY: Record<string, string> = {
-  "item not received": "ITEM_NOT_RECEIVED",
-  "item not as described": "ITEM_NOT_AS_DESCRIBED",
-  "damaged on arrival": "ITEM_DAMAGED",
-  "wrong item": "WRONG_ITEM",
-  "delivery issue": "DELIVERY_ISSUE",
-  "contract breach": "CONTRACT_BREACH",
-};
-
-export function reasonToCategory(reason: string): string {
-  return REASON_TO_CATEGORY[reason.trim().toLowerCase()] ?? "OTHER";
-}
-
 export interface ThreadMessage {
   id: string;
   senderRole: "buyer" | "seller" | "admin";
@@ -56,6 +30,87 @@ export interface AdminDisputeDetail {
   };
   evidence: { id: string; role: string; type: string; url: string; description?: string; createdAt: string }[];
   messages: ThreadMessage[];
+}
+
+const MOCK_DISPUTES: Dispute[] = [
+  {
+    id: "d1",
+    transactionId: "ZUNO9DF8GH7JK6",
+    reason: "Item not as described",
+    description: "The drone arrived with a standard 2453mAh battery instead of the Intelligent Flight Battery Plus (3850mAh) specified in the agreed contract.",
+    status: "under_review",
+    createdAt: "2026-05-20T09:00:00.000Z",
+    evidenceUrls: [],
+  },
+];
+
+const MOCK_MESSAGES: Record<string, ThreadMessage[]> = {
+  d1: [
+    {
+      id: "m1",
+      senderRole: "buyer",
+      mine: false,
+      text: "The drone package arrived today, but the battery enclosed is the standard 2453mAh pack. The contract agreed on the Intelligent Flight Battery Plus (3850mAh).",
+      isOffer: false,
+      createdAt: "2026-05-20T09:30:00.000Z",
+    },
+    {
+      id: "m2",
+      senderRole: "seller",
+      mine: false,
+      text: "Hello Peter, apologies for the warehouse oversight. The Plus battery shipment was delayed. We can offer an immediate KES 15,000 partial refund so you can purchase the Plus battery locally.",
+      isOffer: true,
+      offerAmount: 15000,
+      offerStatus: "PENDING",
+      createdAt: "2026-05-20T10:15:00.000Z",
+    },
+    {
+      id: "m3",
+      senderRole: "buyer",
+      mine: false,
+      text: "The standalone Plus battery costs KES 22,000 at DJI Nairobi retail. KES 15,000 is too low to cover the replacement cost.",
+      isOffer: false,
+      createdAt: "2026-05-20T11:00:00.000Z",
+    },
+  ],
+};
+
+const MOCK_EVIDENCE: Record<
+  string,
+  { id: string; role: string; type: string; url: string; description?: string; createdAt: string }[]
+> = {
+  d1: [
+    {
+      id: "ev1",
+      role: "buyer",
+      type: "photo",
+      url: "https://images.unsplash.com/photo-1527977966376-1c8408f9f108?w=800&auto=format&fit=crop",
+      description: "Photo of received retail box and standard 2453mAh battery serial",
+      createdAt: "2026-05-20T09:15:00.000Z",
+    },
+    {
+      id: "ev2",
+      role: "seller",
+      type: "document",
+      url: "https://images.unsplash.com/photo-1554415707-9e4c0193af47?w=800&auto=format&fit=crop",
+      description: "Dispatch delivery note & courier receipt",
+      createdAt: "2026-05-20T10:20:00.000Z",
+    },
+  ],
+};
+
+/** UI reason titles → API categories. */
+const REASON_TO_CATEGORY: Record<string, string> = {
+  "item not received": "ITEM_NOT_RECEIVED",
+  "item not as described": "ITEM_NOT_AS_DESCRIBED",
+  "damaged on arrival": "ITEM_DAMAGED",
+  "wrong item": "WRONG_ITEM",
+  "delivery issue": "DELIVERY_ISSUE",
+  "contract breach": "CONTRACT_BREACH",
+};
+
+export function reasonToCategory(reason: string): string {
+  return REASON_TO_CATEGORY[reason.trim().toLowerCase()] ?? "OTHER";
 }
 
 function mapMessage(m: Record<string, any>, viewer?: string): ThreadMessage { // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -107,7 +162,9 @@ export const disputesService = {
   // ── The conversation between buyer and seller ──────────────
 
   async thread(id: string): Promise<{ messages: ThreadMessage[]; viewerRole: string }> {
-    if (env.useMockApi) return mockResolve({ messages: [], viewerRole: "buyer" });
+    if (env.useMockApi) {
+      return mockResolve({ messages: MOCK_MESSAGES[id] || [], viewerRole: "admin" });
+    }
     const r = await apiClient.get<{ messages: Record<string, unknown>[]; viewer_role: string }>(
       `/negotiation/${id}/messages`,
     );
@@ -115,13 +172,37 @@ export const disputesService = {
   },
 
   async sendMessage(id: string, message: string): Promise<void> {
-    if (env.useMockApi) return mockResolve<void>(undefined);
+    if (env.useMockApi) {
+      if (!MOCK_MESSAGES[id]) MOCK_MESSAGES[id] = [];
+      MOCK_MESSAGES[id].push({
+        id: `m_${Date.now()}`,
+        senderRole: "admin",
+        mine: true,
+        text: message,
+        isOffer: false,
+        createdAt: new Date().toISOString(),
+      });
+      return mockResolve<void>(undefined);
+    }
     await apiClient.post(`/negotiation/${id}/message`, { message });
   },
 
   /** `refundToBuyer` = whole shillings the buyer gets back; the seller keeps the rest. */
   async makeOffer(id: string, refundToBuyer: number, message: string): Promise<void> {
-    if (env.useMockApi) return mockResolve<void>(undefined);
+    if (env.useMockApi) {
+      if (!MOCK_MESSAGES[id]) MOCK_MESSAGES[id] = [];
+      MOCK_MESSAGES[id].push({
+        id: `m_${Date.now()}`,
+        senderRole: "seller",
+        mine: true,
+        text: message,
+        isOffer: true,
+        offerAmount: Math.round(refundToBuyer),
+        offerStatus: "PENDING",
+        createdAt: new Date().toISOString(),
+      });
+      return mockResolve<void>(undefined);
+    }
     await apiClient.post(`/negotiation/${id}/offer`, { offer_amount: Math.round(refundToBuyer), message });
   },
 
@@ -131,7 +212,24 @@ export const disputesService = {
     response: "ACCEPTED" | "REJECTED" | "COUNTERED",
     counterAmount?: number,
   ): Promise<void> {
-    if (env.useMockApi) return mockResolve<void>(undefined);
+    if (env.useMockApi) {
+      const list = MOCK_MESSAGES[disputeId] || [];
+      const off = list.find((m) => m.id === offerId);
+      if (off) off.offerStatus = response;
+      if (counterAmount) {
+        list.push({
+          id: `m_${Date.now()}`,
+          senderRole: "buyer",
+          mine: true,
+          text: `Counter-offer: KES ${counterAmount.toLocaleString()}`,
+          isOffer: true,
+          offerAmount: counterAmount,
+          offerStatus: "PENDING",
+          createdAt: new Date().toISOString(),
+        });
+      }
+      return mockResolve<void>(undefined);
+    }
     await apiClient.post(`/negotiation/${disputeId}/offer/${offerId}/respond`, {
       response,
       counter_amount: counterAmount != null ? Math.round(counterAmount) : undefined,
@@ -139,12 +237,32 @@ export const disputesService = {
   },
 
   async escalate(id: string): Promise<void> {
-    if (env.useMockApi) return mockResolve<void>(undefined);
+    if (env.useMockApi) {
+      const found = MOCK_DISPUTES.find((d) => d.id === id);
+      if (found) found.status = "under_review";
+      return mockResolve<void>(undefined);
+    }
     await apiClient.post(`/disputes/${id}/escalate`);
   },
 
-  async uploadEvidence(id: string, file: File, type: "photo" | "screenshot" | "document" | "tracking", description?: string): Promise<void> {
-    if (env.useMockApi) return mockResolve<void>(undefined);
+  async uploadEvidence(
+    id: string,
+    file: File,
+    type: "photo" | "screenshot" | "document" | "tracking",
+    description?: string,
+  ): Promise<void> {
+    if (env.useMockApi) {
+      if (!MOCK_EVIDENCE[id]) MOCK_EVIDENCE[id] = [];
+      MOCK_EVIDENCE[id].push({
+        id: `ev_${Date.now()}`,
+        role: "buyer",
+        type,
+        url: URL.createObjectURL(file),
+        description: description || file.name,
+        createdAt: new Date().toISOString(),
+      });
+      return mockResolve<void>(undefined);
+    }
     const form = new FormData();
     form.append("file", file);
     form.append("evidence_type", type);
@@ -155,7 +273,10 @@ export const disputesService = {
   // ── Admin ──────────────────────────────────────────────────
 
   async adminList(status?: string): Promise<Dispute[]> {
-    if (env.useMockApi) return mockResolve([...MOCK_DISPUTES]);
+    if (env.useMockApi) {
+      if (status) return mockResolve(MOCK_DISPUTES.filter((d) => d.status === status));
+      return mockResolve([...MOCK_DISPUTES]);
+    }
     const rows = await apiClient.getList<Record<string, unknown>>(
       `/admin/disputes${status ? `?status=${encodeURIComponent(status)}` : ""}`,
       "disputes",
@@ -164,7 +285,23 @@ export const disputesService = {
   },
 
   async adminDetail(id: string): Promise<AdminDisputeDetail> {
-    if (env.useMockApi) return mockReject("Not available in mock mode", 404, "NOT_FOUND");
+    if (env.useMockApi) {
+      const d = MOCK_DISPUTES.find((item) => item.id === id);
+      if (!d) return mockReject(`Dispute ${id} not found`, 404, "NOT_FOUND");
+      return mockResolve({
+        dispute: {
+          ...d,
+          buyerName: "Peter Njoroge",
+          sellerName: "Aerial KE",
+          itemName: "DJI Mini 5 Pro",
+          buyerPays: 169125,
+          sellerReceives: 160875,
+          transactionStatus: "Disputed",
+        },
+        evidence: MOCK_EVIDENCE[id] || [],
+        messages: MOCK_MESSAGES[id] || [],
+      });
+    }
     const r = await apiClient.get<Record<string, any>>(`/admin/disputes/${id}`); // eslint-disable-line @typescript-eslint/no-explicit-any
     const d = r.dispute;
     return {
@@ -196,7 +333,33 @@ export const disputesService = {
     splitBuyerAmount?: number;
     splitSellerAmount?: number;
   }): Promise<void> {
-    if (env.useMockApi) return mockResolve<void>(undefined);
+    if (env.useMockApi) {
+      const found = MOCK_DISPUTES.find((d) => d.id === input.id);
+      if (found) {
+        found.status = "resolved";
+        found.resolution = input.resolution;
+        found.resolvedInFavorOf =
+          input.resolution === "REFUND_BUYER"
+            ? "buyer"
+            : input.resolution === "RELEASE_TO_SELLER"
+              ? "seller"
+              : undefined;
+        found.resolutionNote = input.notes;
+        found.resolvedAt = new Date().toISOString();
+        found.splitBuyerAmount = input.splitBuyerAmount;
+        found.splitSellerAmount = input.splitSellerAmount;
+      }
+      if (!MOCK_MESSAGES[input.id]) MOCK_MESSAGES[input.id] = [];
+      MOCK_MESSAGES[input.id].push({
+        id: `m_${Date.now()}`,
+        senderRole: "admin",
+        mine: true,
+        text: `Mediator Resolution (${input.resolution}): ${input.notes}`,
+        isOffer: false,
+        createdAt: new Date().toISOString(),
+      });
+      return mockResolve<void>(undefined);
+    }
     await apiClient.post(`/admin/disputes/${input.id}/resolve`, {
       resolution: input.resolution,
       admin_notes: input.notes,
@@ -225,7 +388,18 @@ export const disputesService = {
       resolution: input.resolvedInFavorOf === "buyer" ? "REFUND_BUYER" : "RELEASE_TO_SELLER",
       notes: input.resolutionNote,
     });
-    return { id: input.id, transactionId: "", reason: "", description: "", status: "resolved",
-      createdAt: "", evidenceUrls: [], resolvedInFavorOf: input.resolvedInFavorOf, resolutionNote: input.resolutionNote };
+    return {
+      id: input.id,
+      transactionId: "",
+      reason: "",
+      description: "",
+      status: "resolved",
+      createdAt: "",
+      evidenceUrls: [],
+      resolvedInFavorOf: input.resolvedInFavorOf,
+      resolutionNote: input.resolutionNote,
+    };
   },
 };
+
+export { ApiError } from "@/lib/api/client";

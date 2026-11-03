@@ -289,8 +289,8 @@ export const adminService = {
         verifiedSellers: seedSellers.filter((s) => s.verified).length,
         pendingKyc: MOCK_KYC_QUEUE.length,
         disputes: disputedTxs.length,
-        resolvedDisputes: 0,
-        openDisputes: disputedTxs.length,
+        resolvedDisputes: (await (await import("./disputes.service")).disputesService.adminList()).filter((d) => d.status === "resolved").length,
+        openDisputes: (await (await import("./disputes.service")).disputesService.adminList()).filter((d) => d.status !== "resolved" && d.status !== "rejected").length,
       });
     }
     const r = await apiClient.get<Raw>("/admin/metrics");
