@@ -34,3 +34,8 @@ dist-ssr
 # Env files
 .env
 !.env.example
+
+# OS and shell artifacts
+Thumbs.db
+ehthumbs.db
+*.tmp
