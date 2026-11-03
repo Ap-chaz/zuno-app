@@ -4,7 +4,6 @@ import { LogOut, TrendingUp } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import { PhoneFrame } from "@/components/zuno/PhoneFrame";
 import { TopBar } from "@/components/zuno/TopBar";
-import { AdminGate } from "@/components/zuno/AdminGate";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { adminLogout } from "@/lib/admin-auth";
 import { useAdminTransactions } from "@/hooks/queries/useAdmin";
@@ -12,11 +11,7 @@ import { formatCurrency } from "@/services/transactions.service";
 
 export const Route = createFileRoute("/admin/analytics")({
   head: () => ({ meta: [{ title: "Analytics — ZUNO Admin" }] }),
-  component: () => (
-    <AdminGate>
-      <AdminAnalytics />
-    </AdminGate>
-  ),
+  component: AdminAnalytics,
 });
 
 const STATUS_LABEL: Record<string, string> = {

@@ -17,7 +17,6 @@ export const transactions: SeedTransaction[] = [
   { id: "ZUNO9DF8GH7JK6", item: "DJI Mini 5 Pro", seller: "Aerial KE", buyerName: "Peter Njoroge", amount: 165000, date: "20/05/2026", status: "Disputed", category: "Drones", flaggedForReview: true },
 ];
 
-
 export const sellers: Seller[] = [
   { id: "gadget-world", name: "Gadget World", initials: "GW", rating: 4.9, reviews: 1284, category: "Electronics", verified: true, verificationTier: "verified", disputeCount: 0, deals: 3200, tagline: "Premium phones & tablets", color: "from-amber-400/30 to-orange-500/20", location: "Nairobi, Kenya", description: "Kenya's trusted destination for genuine smartphones, tablets, and accessories. Every device is sourced directly and backed by our 12-month warranty.", responseRate: 98, payoutMethod: "mpesa", payoutDetails: "Till 174829", links: { instagram: "https://instagram.com/gadgetworld", facebook: "https://facebook.com/gadgetworld", whatsapp: "https://wa.me/254700000001", website: "https://gadgetworld.co.ke" } },
   { id: "techhub-ke", name: "TechHub KE", initials: "TH", rating: 4.8, reviews: 892, category: "Computing", verified: true, verificationTier: "verified", disputeCount: 0, deals: 1850, tagline: "Laptops, accessories & repair", color: "from-violet-400/30 to-indigo-500/20", location: "Westlands, Nairobi", description: "Laptops, peripherals and certified repair services for professionals and creators.", responseRate: 96, links: { instagram: "https://instagram.com/techhubke", whatsapp: "https://wa.me/254700000002", website: "https://techhub.co.ke" } },
@@ -28,23 +27,3 @@ export const sellers: Seller[] = [
 ];
 
 export const categories = ["All", "Electronics", "Computing", "Audio", "Furniture", "Drones", "Wearables"];
-
-export function statusColor(s: TxStatus) {
-  switch (s) {
-    case "Completed":
-      return "bg-success/15 text-success border-success/30";
-    case "Funded":
-    case "Protected":
-      return "bg-accent/20 text-accent border-accent/30";
-    case "Pending":
-      return "bg-gold/15 text-gold border-gold/30";
-    case "Refunded":
-      return "bg-muted text-muted-foreground border-border";
-    case "Disputed":
-      return "bg-destructive/15 text-destructive border-destructive/30";
-  }
-}
-
-export const activeOrders = transactions.filter(
-  (t) => t.status !== "Completed" && t.status !== "Refunded"
-);

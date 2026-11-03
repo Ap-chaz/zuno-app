@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { AdminGate } from "@/components/zuno/AdminGate";
 import { AdminUsers } from "@/components/zuno/AdminUsers";
 
 export const Route = createFileRoute("/admin/buyers")({

@@ -4,18 +4,13 @@ import { LogOut, Send, Loader2, Bell, Receipt, AlertTriangle, ShieldCheck, Setti
 import { toast } from "sonner";
 import { PhoneFrame } from "@/components/zuno/PhoneFrame";
 import { TopBar } from "@/components/zuno/TopBar";
-import { AdminGate } from "@/components/zuno/AdminGate";
 import { adminLogout } from "@/lib/admin-auth";
 import { useNotifications, useSendNotification } from "@/hooks/queries/useNotifications";
 import type { Notification } from "@/types/models";
 
 export const Route = createFileRoute("/admin/notifications")({
   head: () => ({ meta: [{ title: "Notifications — ZUNO Admin" }] }),
-  component: () => (
-    <AdminGate>
-      <AdminNotifications />
-    </AdminGate>
-  ),
+  component: AdminNotifications,
 });
 
 const TYPE_OPTIONS: { value: Notification["type"]; label: string; icon: typeof Bell }[] = [

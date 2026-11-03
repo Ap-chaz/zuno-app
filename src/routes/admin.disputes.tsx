@@ -5,7 +5,6 @@ import { AlertTriangle, Clock, CheckCircle2, XCircle, ArrowLeftRight, ShieldChec
 import { toast } from "sonner";
 import { PhoneFrame } from "@/components/zuno/PhoneFrame";
 import { TopBar } from "@/components/zuno/TopBar";
-import { AdminGate } from "@/components/zuno/AdminGate";
 import { adminLogout } from "@/lib/admin-auth";
 import { errorMessage } from "@/lib/api/client";
 import { useAdminDisputes } from "@/hooks/queries/useAdmin";
@@ -15,11 +14,7 @@ import type { Dispute, DisputeStatus } from "@/types/models";
 
 export const Route = createFileRoute("/admin/disputes")({
   head: () => ({ meta: [{ title: "Dispute Resolution Center — ZUNO Admin" }] }),
-  component: () => (
-    <AdminGate>
-      <AdminDisputes />
-    </AdminGate>
-  ),
+  component: AdminDisputes,
 });
 
 const fmt = (n: number) => `Ksh ${n.toLocaleString("en-KE")}`;

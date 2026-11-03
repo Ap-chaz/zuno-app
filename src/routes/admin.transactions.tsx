@@ -3,18 +3,13 @@ import { useMemo, useState } from "react";
 import { Search, LogOut, AlertTriangle } from "lucide-react";
 import { PhoneFrame } from "@/components/zuno/PhoneFrame";
 import { TopBar } from "@/components/zuno/TopBar";
-import { AdminGate } from "@/components/zuno/AdminGate";
 import { adminLogout } from "@/lib/admin-auth";
 import { useAdminTransactions, useAdminPayouts } from "@/hooks/queries/useAdmin";
 import type { AdminPayout } from "@/services/admin.service";
 
 export const Route = createFileRoute("/admin/transactions")({
   head: () => ({ meta: [{ title: "Transaction Monitoring — ZUNO Admin" }] }),
-  component: () => (
-    <AdminGate>
-      <AdminTransactions />
-    </AdminGate>
-  ),
+  component: AdminTransactions,
 });
 
 const STATUSES = ["", "PENDING", "FUNDED", "IN_TRANSIT", "INSPECTION", "DISPUTED", "COMPLETED", "REFUNDED", "RESOLVED", "CANCELLED"];

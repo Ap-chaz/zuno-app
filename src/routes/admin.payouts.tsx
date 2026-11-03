@@ -4,7 +4,6 @@ import { LogOut, Loader2, RefreshCw, Check, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { PhoneFrame } from "@/components/zuno/PhoneFrame";
 import { TopBar } from "@/components/zuno/TopBar";
-import { AdminGate } from "@/components/zuno/AdminGate";
 import { adminLogout } from "@/lib/admin-auth";
 import { errorMessage } from "@/lib/api/client";
 import { useAdminPayouts, useRetryPayout } from "@/hooks/queries/useAdmin";
@@ -12,11 +11,7 @@ import type { AdminPayout } from "@/services/admin.service";
 
 export const Route = createFileRoute("/admin/payouts")({
   head: () => ({ meta: [{ title: "Payout & Refund Queue — ZUNO Admin" }] }),
-  component: () => (
-    <AdminGate>
-      <AdminPayouts />
-    </AdminGate>
-  ),
+  component: AdminPayouts,
 });
 
 const fmt = (n: number) => `Ksh ${n.toLocaleString("en-KE")}`;

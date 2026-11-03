@@ -4,18 +4,13 @@ import { LogOut, Mail, Check, Loader2, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { PhoneFrame } from "@/components/zuno/PhoneFrame";
 import { TopBar } from "@/components/zuno/TopBar";
-import { AdminGate } from "@/components/zuno/AdminGate";
 import { adminLogout } from "@/lib/admin-auth";
 import { useSupportTickets, useResolveSupportTicket } from "@/hooks/queries/useSupport";
 import type { SupportTicket } from "@/types/models";
 
 export const Route = createFileRoute("/admin/support")({
   head: () => ({ meta: [{ title: "Support Tickets — ZUNO Admin" }] }),
-  component: () => (
-    <AdminGate>
-      <AdminSupport />
-    </AdminGate>
-  ),
+  component: AdminSupport,
 });
 
 function AdminSupport() {

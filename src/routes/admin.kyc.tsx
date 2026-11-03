@@ -4,7 +4,6 @@ import { LogOut, Check, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { PhoneFrame } from "@/components/zuno/PhoneFrame";
 import { TopBar } from "@/components/zuno/TopBar";
-import { AdminGate } from "@/components/zuno/AdminGate";
 import { adminLogout } from "@/lib/admin-auth";
 import { errorMessage } from "@/lib/api/client";
 import { useAdminKyc, useReviewKyc } from "@/hooks/queries/useAdmin";
@@ -12,11 +11,7 @@ import type { AdminKycItem } from "@/services/admin.service";
 
 export const Route = createFileRoute("/admin/kyc")({
   head: () => ({ meta: [{ title: "KYC & Compliance — ZUNO Admin" }] }),
-  component: () => (
-    <AdminGate>
-      <AdminKyc />
-    </AdminGate>
-  ),
+  component: AdminKyc,
 });
 
 function AdminKyc() {
