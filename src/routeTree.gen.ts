@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AcceptableUseRouteImport } from './routes/acceptable-use'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as DisputePolicyRouteImport } from './routes/dispute-policy'
 import { Route as ForBuyersRouteImport } from './routes/for-buyers'
@@ -93,6 +94,11 @@ const AcceptableUseRoute = AcceptableUseRouteImport.update({
   path: '/acceptable-use',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppRoute = AppRouteImport.update({
   id: '/app',
   path: '/app',
@@ -169,59 +175,59 @@ const TermsRoute = TermsRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
-  id: '/admin/',
-  path: '/admin/',
-  getParentRoute: () => rootRouteImport,
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
-  id: '/admin/analytics',
-  path: '/admin/analytics',
-  getParentRoute: () => rootRouteImport,
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AdminBuyersRoute = AdminBuyersRouteImport.update({
-  id: '/admin/buyers',
-  path: '/admin/buyers',
-  getParentRoute: () => rootRouteImport,
+  id: '/buyers',
+  path: '/buyers',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AdminDisputesRoute = AdminDisputesRouteImport.update({
-  id: '/admin/disputes',
-  path: '/admin/disputes',
-  getParentRoute: () => rootRouteImport,
+  id: '/disputes',
+  path: '/disputes',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AdminKycRoute = AdminKycRouteImport.update({
-  id: '/admin/kyc',
-  path: '/admin/kyc',
-  getParentRoute: () => rootRouteImport,
+  id: '/kyc',
+  path: '/kyc',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
-  id: '/admin/notifications',
-  path: '/admin/notifications',
-  getParentRoute: () => rootRouteImport,
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AdminPayoutsRoute = AdminPayoutsRouteImport.update({
-  id: '/admin/payouts',
-  path: '/admin/payouts',
-  getParentRoute: () => rootRouteImport,
+  id: '/payouts',
+  path: '/payouts',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AdminSellerAccountsRoute = AdminSellerAccountsRouteImport.update({
-  id: '/admin/seller-accounts',
-  path: '/admin/seller-accounts',
-  getParentRoute: () => rootRouteImport,
+  id: '/seller-accounts',
+  path: '/seller-accounts',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AdminSellersRoute = AdminSellersRouteImport.update({
-  id: '/admin/sellers',
-  path: '/admin/sellers',
-  getParentRoute: () => rootRouteImport,
+  id: '/sellers',
+  path: '/sellers',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AdminSupportRoute = AdminSupportRouteImport.update({
-  id: '/admin/support',
-  path: '/admin/support',
-  getParentRoute: () => rootRouteImport,
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AdminTransactionsRoute = AdminTransactionsRouteImport.update({
-  id: '/admin/transactions',
-  path: '/admin/transactions',
-  getParentRoute: () => rootRouteImport,
+  id: '/transactions',
+  path: '/transactions',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
@@ -423,6 +429,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/acceptable-use': typeof AcceptableUseRoute
+  '/admin': typeof AdminRouteWithChildren
   '/app': typeof AppRouteWithChildren
   '/dispute-policy': typeof DisputePolicyRoute
   '/for-buyers': typeof ForBuyersRoute
@@ -562,6 +569,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/acceptable-use': typeof AcceptableUseRoute
+  '/admin': typeof AdminRouteWithChildren
   '/app': typeof AppRouteWithChildren
   '/dispute-policy': typeof DisputePolicyRoute
   '/for-buyers': typeof ForBuyersRoute
@@ -634,6 +642,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/acceptable-use'
+    | '/admin'
     | '/app'
     | '/dispute-policy'
     | '/for-buyers'
@@ -772,6 +781,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/acceptable-use'
+    | '/admin'
     | '/app'
     | '/dispute-policy'
     | '/for-buyers'
@@ -843,6 +853,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   AcceptableUseRoute: typeof AcceptableUseRoute
+  AdminRoute: typeof AdminRouteWithChildren
   AppRoute: typeof AppRouteWithChildren
   DisputePolicyRoute: typeof DisputePolicyRoute
   ForBuyersRoute: typeof ForBuyersRoute
@@ -858,16 +869,6 @@ export interface RootRouteChildren {
   ShippingPolicyRoute: typeof ShippingPolicyRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
-  AdminAnalyticsRoute: typeof AdminAnalyticsRoute
-  AdminBuyersRoute: typeof AdminBuyersRoute
-  AdminDisputesRoute: typeof AdminDisputesRoute
-  AdminKycRoute: typeof AdminKycRoute
-  AdminNotificationsRoute: typeof AdminNotificationsRoute
-  AdminPayoutsRoute: typeof AdminPayoutsRoute
-  AdminSellerAccountsRoute: typeof AdminSellerAccountsRoute
-  AdminSellersRoute: typeof AdminSellersRoute
-  AdminSupportRoute: typeof AdminSupportRoute
-  AdminTransactionsRoute: typeof AdminTransactionsRoute
   AuthForgotRoute: typeof AuthForgotRoute
   AuthKycRoute: typeof AuthKycRoute
   AuthLoginRoute: typeof AuthLoginRoute
@@ -875,7 +876,6 @@ export interface RootRouteChildren {
   AuthSignupRoute: typeof AuthSignupRoute
   AuthVerifyRoute: typeof AuthVerifyRoute
   PayTransactionIdRoute: typeof PayTransactionIdRoute
-  AdminIndexRoute: typeof AdminIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -899,6 +899,13 @@ declare module '@tanstack/react-router' {
       path: '/acceptable-use'
       fullPath: '/acceptable-use'
       preLoaderRoute: typeof AcceptableUseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app': {
@@ -1008,80 +1015,80 @@ declare module '@tanstack/react-router' {
     }
     '/admin/': {
       id: '/admin/'
-      path: '/admin'
+      path: '/'
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/admin/analytics': {
       id: '/admin/analytics'
-      path: '/admin/analytics'
+      path: '/analytics'
       fullPath: '/admin/analytics'
       preLoaderRoute: typeof AdminAnalyticsRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/admin/buyers': {
       id: '/admin/buyers'
-      path: '/admin/buyers'
+      path: '/buyers'
       fullPath: '/admin/buyers'
       preLoaderRoute: typeof AdminBuyersRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/admin/disputes': {
       id: '/admin/disputes'
-      path: '/admin/disputes'
+      path: '/disputes'
       fullPath: '/admin/disputes'
       preLoaderRoute: typeof AdminDisputesRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/admin/kyc': {
       id: '/admin/kyc'
-      path: '/admin/kyc'
+      path: '/kyc'
       fullPath: '/admin/kyc'
       preLoaderRoute: typeof AdminKycRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/admin/notifications': {
       id: '/admin/notifications'
-      path: '/admin/notifications'
+      path: '/notifications'
       fullPath: '/admin/notifications'
       preLoaderRoute: typeof AdminNotificationsRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/admin/payouts': {
       id: '/admin/payouts'
-      path: '/admin/payouts'
+      path: '/payouts'
       fullPath: '/admin/payouts'
       preLoaderRoute: typeof AdminPayoutsRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/admin/seller-accounts': {
       id: '/admin/seller-accounts'
-      path: '/admin/seller-accounts'
+      path: '/seller-accounts'
       fullPath: '/admin/seller-accounts'
       preLoaderRoute: typeof AdminSellerAccountsRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/admin/sellers': {
       id: '/admin/sellers'
-      path: '/admin/sellers'
+      path: '/sellers'
       fullPath: '/admin/sellers'
       preLoaderRoute: typeof AdminSellersRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/admin/support': {
       id: '/admin/support'
-      path: '/admin/support'
+      path: '/support'
       fullPath: '/admin/support'
       preLoaderRoute: typeof AdminSupportRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/admin/transactions': {
       id: '/admin/transactions'
-      path: '/admin/transactions'
+      path: '/transactions'
       fullPath: '/admin/transactions'
       preLoaderRoute: typeof AdminTransactionsRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/app/': {
       id: '/app/'
@@ -1359,6 +1366,36 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AdminRouteChildren {
+  AdminAnalyticsRoute: typeof AdminAnalyticsRoute
+  AdminBuyersRoute: typeof AdminBuyersRoute
+  AdminDisputesRoute: typeof AdminDisputesRoute
+  AdminKycRoute: typeof AdminKycRoute
+  AdminNotificationsRoute: typeof AdminNotificationsRoute
+  AdminPayoutsRoute: typeof AdminPayoutsRoute
+  AdminSellerAccountsRoute: typeof AdminSellerAccountsRoute
+  AdminSellersRoute: typeof AdminSellersRoute
+  AdminSupportRoute: typeof AdminSupportRoute
+  AdminTransactionsRoute: typeof AdminTransactionsRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminAnalyticsRoute: AdminAnalyticsRoute,
+  AdminBuyersRoute: AdminBuyersRoute,
+  AdminDisputesRoute: AdminDisputesRoute,
+  AdminKycRoute: AdminKycRoute,
+  AdminNotificationsRoute: AdminNotificationsRoute,
+  AdminPayoutsRoute: AdminPayoutsRoute,
+  AdminSellerAccountsRoute: AdminSellerAccountsRoute,
+  AdminSellersRoute: AdminSellersRoute,
+  AdminSupportRoute: AdminSupportRoute,
+  AdminTransactionsRoute: AdminTransactionsRoute,
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
 interface AppRouteChildren {
   AppAccountRoute: typeof AppAccountRoute
   AppDemoRoute: typeof AppDemoRoute
@@ -1444,6 +1481,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   AcceptableUseRoute: AcceptableUseRoute,
+  AdminRoute: AdminRouteWithChildren,
   AppRoute: AppRouteWithChildren,
   DisputePolicyRoute: DisputePolicyRoute,
   ForBuyersRoute: ForBuyersRoute,
@@ -1459,16 +1497,6 @@ const rootRouteChildren: RootRouteChildren = {
   ShippingPolicyRoute: ShippingPolicyRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
-  AdminAnalyticsRoute: AdminAnalyticsRoute,
-  AdminBuyersRoute: AdminBuyersRoute,
-  AdminDisputesRoute: AdminDisputesRoute,
-  AdminKycRoute: AdminKycRoute,
-  AdminNotificationsRoute: AdminNotificationsRoute,
-  AdminPayoutsRoute: AdminPayoutsRoute,
-  AdminSellerAccountsRoute: AdminSellerAccountsRoute,
-  AdminSellersRoute: AdminSellersRoute,
-  AdminSupportRoute: AdminSupportRoute,
-  AdminTransactionsRoute: AdminTransactionsRoute,
   AuthForgotRoute: AuthForgotRoute,
   AuthKycRoute: AuthKycRoute,
   AuthLoginRoute: AuthLoginRoute,
@@ -1476,7 +1504,6 @@ const rootRouteChildren: RootRouteChildren = {
   AuthSignupRoute: AuthSignupRoute,
   AuthVerifyRoute: AuthVerifyRoute,
   PayTransactionIdRoute: PayTransactionIdRoute,
-  AdminIndexRoute: AdminIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
