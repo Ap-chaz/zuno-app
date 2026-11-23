@@ -54,9 +54,10 @@ def _check_secrets():
 
 
 def _ensure_schema():
-    """Apply db/schema.sql idempotently on startup so fresh databases have all tables."""
+    """Apply db/schema.sql idempotently on startup so fresh databases have all tables, and seed admin accounts."""
     import re
     import MySQLdb
+    from app.utils.validators import normalize_phone
     try:
         schema_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'db', 'schema.sql')
         if not os.path.exists(schema_path):
@@ -75,6 +76,38 @@ def _ensure_schema():
         for stmt in sql.split(';'):
             if stmt.strip():
                 cur.execute(stmt)
+
+        # Promote any existing users listed in ADMIN_EMAILS or ADMIN_PHONES to role='admin'
+        admin_emails = [e.strip().lower() for e in os.getenv('ADMIN_EMAILS', '').split(',') if e.strip()]
+        admin_phones = [normalize_phone(p.strip()) or p.strip() for p in os.getenv('ADMIN_PHONES', '').split(',') if p.strip()]
+        for em in admin_emails:
+            cur.execute("UPDATE users SET role = 'admin', is_active = TRUE, phone_verified = TRUE, email_verified = TRUE WHERE LOWER(email) = %s", (em,))
+        for ph in admin_phones:
+            cur.execute("UPDATE users SET role = 'admin', is_active = TRUE, phone_verified = TRUE WHERE phone_number = %s", (ph,))
+
+        # Seed or update a dedicated admin account if ADMIN_EMAIL and ADMIN_PASSWORD are provided
+        seed_email = (os.getenv('ADMIN_EMAIL') or '').strip().lower()
+        seed_password = os.getenv('ADMIN_PASSWORD') or ''
+        seed_phone = normalize_phone((os.getenv('ADMIN_PHONE') or '+254799999999').strip()) or '+254799999999'
+        seed_name = (os.getenv('ADMIN_NAME') or 'Zuno Admin').strip()
+        if seed_email and len(seed_password) >= 8:
+            pw_hash = bcrypt.generate_password_hash(seed_password).decode('utf-8')
+            cur.execute("SELECT id FROM users WHERE LOWER(email) = %s OR phone_number = %s LIMIT 1", (seed_email, seed_phone))
+            row = cur.fetchone()
+            if row:
+                cur.execute("""
+                    UPDATE users
+                    SET role = 'admin', password_hash = %s, is_active = TRUE,
+                        phone_verified = TRUE, email_verified = TRUE,
+                        failed_logins = 0, locked_until = NULL
+                    WHERE id = %s
+                """, (pw_hash, row[0]))
+            else:
+                cur.execute("""
+                    INSERT INTO users (full_name, phone_number, email, email_verified, password_hash, role, is_active, is_verified, phone_verified, verification_status)
+                    VALUES (%s, %s, %s, TRUE, %s, 'admin', TRUE, TRUE, TRUE, 'VERIFIED')
+                """, (seed_name, seed_phone, seed_email, pw_hash))
+
         cur.close()
         conn.close()
     except Exception as e:
@@ -165,6 +198,7 @@ def create_app(run_scheduler=None):
     from app.routes.admin import admin_bp
     from app.routes.sellers import sellers_bp
     from app.routes.notifications import notifications_bp
+    from app.routes.support import support_bp
 
     app.register_blueprint(auth_bp,         url_prefix='/api/auth')
     app.register_blueprint(contracts_bp,    url_prefix='/api/contracts')
@@ -178,6 +212,7 @@ def create_app(run_scheduler=None):
     app.register_blueprint(admin_bp,        url_prefix='/api/admin')
     app.register_blueprint(sellers_bp,      url_prefix='/api/sellers')
     app.register_blueprint(notifications_bp, url_prefix='/api/notifications')
+    app.register_blueprint(support_bp,      url_prefix='/api/support')
     app.register_blueprint(health_bp, url_prefix='')
 
     # ── BACKGROUND JOBS ───────────────────────────────────────
