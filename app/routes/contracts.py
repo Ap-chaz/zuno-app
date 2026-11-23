@@ -76,6 +76,8 @@ def create_contract():
         return err('Account not found or suspended', 401, 'UNAUTHENTICATED')
     if not user['phone_verified']:
         return err('Verify your phone number before starting a deal.', 403, 'PHONE_NOT_VERIFIED')
+    if not user.get('is_verified') and user.get('verification_status') != 'VERIFIED':
+        return err('Identity verification (KYC) required. Please submit your identity documents and get verified before starting a deal.', 403, 'KYC_REQUIRED')
 
     data = request.get_json(silent=True)
 
@@ -102,7 +104,7 @@ def create_contract():
     cursor = mysql.connection.cursor()
     cursor.execute("""
         SELECT id, full_name, business_name, phone_number,
-               is_active, seller_tier, role
+               is_active, seller_tier, role, is_verified, verification_status
         FROM users WHERE id = %s
     """, (data['seller_id'],))
     seller = cursor.fetchone()
@@ -114,6 +116,10 @@ def create_contract():
     if not seller['is_active']:
         cursor.close()
         return err('This seller account is currently unavailable', 400, 'SELLER_UNAVAILABLE')
+
+    if not seller.get('is_verified') and seller.get('verification_status') != 'VERIFIED':
+        cursor.close()
+        return err('This seller has not completed identity verification (KYC). Deals can only be created with verified sellers.', 400, 'SELLER_NOT_VERIFIED')
 
     if seller['id'] == user['id']:
         cursor.close()
@@ -256,8 +262,10 @@ def confirm_contract(contract_id):
 
     # Verify this contract belongs to the logged-in seller
     cursor.execute("""
-        SELECT * FROM deal_contracts
-        WHERE id = %s AND seller_id = %s
+        SELECT c.*, u.is_verified, u.verification_status
+        FROM deal_contracts c
+        JOIN users u ON u.id = c.seller_id
+        WHERE c.id = %s AND c.seller_id = %s
     """, (contract_id, user_id))
 
     contract = cursor.fetchone()
@@ -265,6 +273,13 @@ def confirm_contract(contract_id):
     if not contract:
         cursor.close()
         return jsonify({'error': 'Contract not found'}), 404
+
+    # Seller must be KYC verified
+    if not contract.get('is_verified') and contract.get('verification_status') != 'VERIFIED':
+        cursor.close()
+        return jsonify({
+            'error': 'Identity verification (KYC) required before confirming contracts.'
+        }), 403
 
     # Can only confirm a contract that is awaiting review
     if contract['status'] != 'SELLER_REVIEWING':

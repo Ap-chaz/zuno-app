@@ -89,6 +89,8 @@ def initiate_payment():
     user = current_user()
     if not user:
         return err('Account not found or suspended', 401, 'UNAUTHENTICATED')
+    if not user.get('is_verified') and user.get('verification_status') != 'VERIFIED':
+        return err('Identity verification (KYC) required before making payments. Please verify your account first.', 403, 'KYC_REQUIRED')
 
     data = request.get_json(silent=True) or {}
     valid, error = validate_required_fields(data, ['transaction_id'])

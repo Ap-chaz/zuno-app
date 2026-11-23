@@ -119,6 +119,20 @@ def create_transaction():
                      f"Buyer must confirm the contract first."
         }), 400
 
+    # ── Verify both parties are KYC verified ──────────────────
+    cursor.execute("SELECT is_verified, verification_status FROM users WHERE id = %s", (user_id,))
+    seller_user = cursor.fetchone()
+    if not seller_user or (not seller_user.get('is_verified') and seller_user.get('verification_status') != 'VERIFIED'):
+        cursor.close()
+        return jsonify({'error': 'Identity verification (KYC) required before creating transactions.'}), 403
+
+    if contract.get('buyer_user_id'):
+        cursor.execute("SELECT is_verified, verification_status FROM users WHERE id = %s", (contract['buyer_user_id'],))
+        buyer_user = cursor.fetchone()
+        if not buyer_user or (not buyer_user.get('is_verified') and buyer_user.get('verification_status') != 'VERIFIED'):
+            cursor.close()
+            return jsonify({'error': 'The buyer must complete identity verification (KYC) before this transaction can be created.'}), 403
+
     # ── Check no transaction already exists for this contract ─
     cursor.execute(
         "SELECT id FROM transactions WHERE contract_id = %s",

@@ -74,12 +74,12 @@ def calculate_fees(amount):
 def tier_limit(tier):
     """
     Maximum deal size (KES) for a seller tier. Configurable via env:
-      TIER0_MAX_KES (unverified)        default 1,000
+      TIER0_MAX_KES (unverified)        default 0 (KYC required)
       TIER1_MAX_KES (KYC approved)      default 50,000
       TIER2_MAX_KES (business verified) default 1,000,000
     """
     limits = {
-        0: int(os.getenv('TIER0_MAX_KES', 1000)),
+        0: int(os.getenv('TIER0_MAX_KES', 0)),
         1: int(os.getenv('TIER1_MAX_KES', 50000)),
         2: int(os.getenv('TIER2_MAX_KES', 1000000)),
     }
