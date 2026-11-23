@@ -301,13 +301,12 @@ def get_metrics():
     # User metrics
     cursor.execute("""
         SELECT
-            COUNT(*) as total_sellers,
-            SUM(CASE WHEN is_verified=TRUE THEN 1 ELSE 0 END)
-                as verified_sellers,
-            SUM(CASE WHEN verification_status='PENDING'
-                THEN 1 ELSE 0 END) as pending_verification
-        FROM users
-        WHERE role = 'seller'
+            (SELECT COUNT(*) FROM users WHERE role = 'seller') as total_sellers,
+            (SELECT COUNT(*) FROM users WHERE role = 'seller' AND is_verified = TRUE) as verified_sellers,
+            GREATEST(
+                (SELECT COUNT(*) FROM kyc_submissions WHERE status IN ('SUBMITTED', 'PENDING', 'UNDER_REVIEW', 'RESUBMITTED')),
+                (SELECT COUNT(*) FROM users WHERE verification_status = 'PENDING')
+            ) as pending_verification
     """)
     user_metrics = cursor.fetchone()
 
@@ -378,14 +377,14 @@ def verify_seller(user_id):
 
     cursor = mysql.connection.cursor()
     cursor.execute(
-        "SELECT * FROM users WHERE id = %s AND role = 'seller'",
+        "SELECT * FROM users WHERE id = %s",
         (user_id,)
     )
     user = cursor.fetchone()
 
     if not user:
         cursor.close()
-        return jsonify({'error': 'Seller not found'}), 404
+        return jsonify({'error': 'User not found'}), 404
 
     if data['decision'] == 'APPROVED':
         cursor.execute("""
@@ -524,27 +523,28 @@ def get_pending_kyc():
 
     cursor.execute("""
         SELECT
-            k.id,
-            k.seller_id,
-            k.full_name,
-            k.national_id_number,
+            COALESCE(k.id, u.id) as id,
+            u.id as seller_id,
+            COALESCE(k.full_name, u.full_name) as full_name,
+            COALESCE(k.national_id_number, u.national_id, 'N/A') as national_id_number,
             k.date_of_birth,
-            k.id_front_url,
+            COALESCE(k.id_front_url, u.id_document_url) as id_front_url,
             k.id_back_url,
             k.selfie_url,
-            k.business_name,
-            k.business_type,
+            COALESCE(k.business_name, u.business_name) as business_name,
+            COALESCE(k.business_type, 'INDIVIDUAL') as business_type,
             k.kra_pin,
-            k.status,
-            k.submitted_at,
+            COALESCE(k.status, u.verification_status) as status,
+            COALESCE(k.submitted_at, u.created_at) as submitted_at,
             u.phone_number,
             u.email,
             u.seller_tier,
             u.verification_status
-        FROM kyc_submissions k
-        JOIN users u ON u.id = k.seller_id
-        WHERE k.status IN ('SUBMITTED', 'UNDER_REVIEW', 'RESUBMITTED')
-        ORDER BY k.submitted_at ASC
+        FROM users u
+        LEFT JOIN kyc_submissions k ON k.seller_id = u.id
+        WHERE u.verification_status = 'PENDING'
+           OR (k.status IN ('SUBMITTED', 'PENDING', 'UNDER_REVIEW', 'RESUBMITTED'))
+        ORDER BY COALESCE(k.submitted_at, u.created_at) ASC
     """)
 
     submissions = cursor.fetchall()
@@ -636,6 +636,12 @@ def review_kyc(submission_id):
     submission = cursor.fetchone()
 
     if not submission:
+        cursor.execute("SELECT id as seller_id, phone_number, full_name FROM users WHERE id = %s", (submission_id,))
+        u = cursor.fetchone()
+        if u:
+            submission = {'seller_id': u['seller_id'], 'phone_number': u['phone_number'], 'full_name': u['full_name']}
+
+    if not submission:
         cursor.close()
         return jsonify({'error': 'KYC submission not found'}), 404
 
@@ -650,12 +656,13 @@ def review_kyc(submission_id):
                 review_notes = %s,
                 reviewed_at = %s,
                 approved_at = %s
-            WHERE id = %s
+            WHERE id = %s OR seller_id = %s
         """, (
             admin_id,
-            data['review_notes'],
+            data.get('review_notes', 'Documents verified.'),
             now, now,
-            submission_id
+            submission_id,
+            submission['seller_id']
         ))
 
         # Update user — award verified badge and increase tier
@@ -669,30 +676,28 @@ def review_kyc(submission_id):
             WHERE id = %s
         """, (
             now,
-            data['review_notes'],
+            data.get('review_notes', 'Documents verified.'),
             submission['seller_id']
         ))
 
         mysql.connection.commit()
         cursor.close()
 
-        # Notify seller of approval
+        # Notify user of approval
         from app.services.sms import send_sms
         send_sms(
             submission['phone_number'],
             f"Zuno: Congratulations {submission['full_name']}! "
             f"Your KYC verification has been approved. "
-            f"You now have a Verified Seller badge. "
-            f"Your transaction limit is now Ksh {tier_limit(1):,}. "
-            f"You can now list products in the Zuno catalog. "
-            f"Keep building your reputation!"
+            f"Your account is now fully verified. "
+            f"You can now create, buy, and sell with protected escrow on Zuno."
         )
         notify_phone(submission['phone_number'], 'Identity verified',
-                     'Your verification was approved. Your deal limit is now higher.', 'kyc')
+                     'Your verification was approved. You can now transact on Zuno.', 'kyc')
 
         return jsonify({
             'message': f"KYC approved for {submission['full_name']}. "
-                       f"Seller now has Verified Badge and Tier 1 access.",
+                       f"Account is now fully verified.",
             'submission_id': submission_id,
             'seller_id': submission['seller_id'],
             'decision': 'APPROVED'
@@ -707,13 +712,14 @@ def review_kyc(submission_id):
                 review_notes = %s,
                 rejection_reason = %s,
                 reviewed_at = %s
-            WHERE id = %s
+            WHERE id = %s OR seller_id = %s
         """, (
             admin_id,
-            data['review_notes'],
+            data.get('review_notes', ''),
             data['rejection_reason'],
             now,
-            submission_id
+            submission_id,
+            submission['seller_id']
         ))
 
         # Update user status back to allow resubmission
