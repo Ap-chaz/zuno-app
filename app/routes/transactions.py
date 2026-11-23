@@ -604,7 +604,7 @@ def cancel_transaction(transaction_id):
     """
     POST /api/transactions/<transaction_id>/cancel
 
-    Only a PENDING (unpaid) transaction can be cancelled, by its seller.
+    Only a PENDING (unpaid) transaction can be cancelled, by its seller or buyer.
     Once funded, the only way out is the dispute process.
     """
     user = current_user()
@@ -612,13 +612,17 @@ def cancel_transaction(transaction_id):
         return err('Account not found or suspended', 401, 'UNAUTHENTICATED')
 
     cursor = mysql.connection.cursor()
-    cursor.execute("SELECT * FROM transactions WHERE id = %s AND seller_id = %s",
-                   (transaction_id, user['id']))
+    cursor.execute("SELECT * FROM transactions WHERE id = %s", (transaction_id,))
     txn = cursor.fetchone()
+    role_on_deal = party_role(txn, user) if txn else None
 
-    if not txn:
+    if not txn or role_on_deal not in ('seller', 'buyer', 'admin'):
         cursor.close()
         return err('Transaction not found', 404, 'NOT_FOUND')
+
+    cursor.execute("SELECT phone_number FROM users WHERE id = %s", (txn['seller_id'],))
+    seller_row = cursor.fetchone()
+    seller_phone = seller_row['phone_number'] if seller_row else None
 
     cursor.execute("""
         UPDATE transactions SET status = 'CANCELLED', cancelled_at = %s
@@ -637,12 +641,21 @@ def cancel_transaction(transaction_id):
         transaction_id, action='TRANSACTION_CANCELLED', performed_by=str(user['id']),
         old_value='PENDING', new_value='CANCELLED')
 
-    send_sms(txn['buyer_phone'],
-             f"Zuno: The deal for '{txn['item_name']}' was cancelled by the seller. "
-             f"No payment was taken. Transaction ID: {transaction_id}")
-    notify_phone(txn['buyer_phone'], 'Seller cancelled the deal',
-                 f"'{txn['item_name']}' was cancelled by the seller. No payment was taken.",
-                 'transaction', transaction_id)
+    cancelled_by = 'buyer' if role_on_deal == 'buyer' else 'seller'
+    if cancelled_by == 'seller':
+        send_sms(txn['buyer_phone'],
+                 f"Zuno: The deal for '{txn['item_name']}' was cancelled by the seller. "
+                 f"No payment was taken. Transaction ID: {transaction_id}")
+        notify_phone(txn['buyer_phone'], 'Seller cancelled the deal',
+                     f"'{txn['item_name']}' was cancelled by the seller. No payment was taken.",
+                     'transaction', transaction_id)
+    elif seller_phone:
+        send_sms(seller_phone,
+                 f"Zuno: The buyer cancelled the unpaid order for '{txn['item_name']}'. "
+                 f"Transaction ID: {transaction_id}")
+        notify_phone(seller_phone, 'Buyer cancelled the order',
+                     f"'{txn['item_name']}' was cancelled by the buyer before payment.",
+                     'transaction', transaction_id)
 
     return jsonify({'message': 'Transaction cancelled successfully.',
                     'transaction_id': transaction_id}), 200
