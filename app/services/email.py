@@ -18,10 +18,12 @@
 # confirm it belongs to their account, and mark email verified.
 # The token is then deleted — it can never be used again.
 
+from flask import current_app
 from flask_mail import Message
 from app import mail, mysql
 import secrets
 import os
+import threading
 from datetime import datetime, timedelta
 
 
@@ -91,6 +93,10 @@ def send_verification_email(user_id, email, full_name):
     verification_link = f"{frontend_url}/verify-email?token={token}"
     
     # Build and send the email
+    if not os.getenv('MAIL_USERNAME') or not os.getenv('MAIL_PASSWORD'):
+        print(f"[EMAIL DEV - not sent] Verification link for {email}: {verification_link}")
+        return True
+
     try:
         msg = Message(
             subject="Verify your Zuno email address",
@@ -172,8 +178,15 @@ support@zuno.co.ke
 </html>
         """
         
-        mail.send(msg)
-        print(f"[EMAIL] Verification email sent to {email}")
+        app = current_app._get_current_object()
+        def _send_async(app_obj, message):
+            with app_obj.app_context():
+                try:
+                    mail.send(message)
+                    print(f"[EMAIL] Verification email sent to {email}")
+                except Exception as exc:
+                    print(f"[EMAIL ERROR] Failed to send to {email}: {str(exc)}")
+        threading.Thread(target=_send_async, args=(app, msg), daemon=True).start()
         return True
         
     except Exception as e:
@@ -186,6 +199,9 @@ def send_welcome_email(email, full_name):
     Sends a welcome email after successful email verification.
     Simple confirmation that their account is fully set up.
     """
+    if not os.getenv('MAIL_USERNAME') or not os.getenv('MAIL_PASSWORD'):
+        print(f"[EMAIL DEV - not sent] Welcome email for {email}")
+        return True
     try:
         msg = Message(
             subject="Welcome to Zuno — Your account is ready!",
@@ -237,7 +253,14 @@ The Zuno Team
 </html>
         """
         
-        mail.send(msg)
+        app = current_app._get_current_object()
+        def _send_welcome_async(app_obj, message):
+            with app_obj.app_context():
+                try:
+                    mail.send(message)
+                except Exception as exc:
+                    print(f"[EMAIL ERROR] Welcome email failed for {email}: {str(exc)}")
+        threading.Thread(target=_send_welcome_async, args=(app, msg), daemon=True).start()
         return True
         
     except Exception as e:

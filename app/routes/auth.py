@@ -89,9 +89,38 @@ def register():
         return err('Enter a valid email address', 400, 'VALIDATION_ERROR')
 
     cursor = mysql.connection.cursor()
-    cursor.execute("SELECT id FROM users WHERE phone_number = %s OR (%s IS NOT NULL AND email = %s)",
+    cursor.execute("SELECT id, phone_verified FROM users WHERE phone_number = %s OR (%s IS NOT NULL AND email = %s)",
                    (phone, email, email))
-    if cursor.fetchone():
+    existing = cursor.fetchone()
+    if existing:
+        if not existing.get('phone_verified'):
+            # If the user's previous signup timed out before phone verification,
+            # let them re-register with the same phone/email to complete OTP.
+            password_hash = bcrypt.generate_password_hash(data['password']).decode('utf-8')
+            try:
+                cursor.execute("""
+                    UPDATE users
+                    SET full_name = %s, phone_number = %s, email = %s, password_hash = %s,
+                        business_name = %s, role = %s
+                    WHERE id = %s
+                """, (str(data['full_name']).strip()[:150], phone, email, password_hash,
+                      (data.get('business_name') or None) if role == 'seller' else None, role, existing['id']))
+                if role == 'seller':
+                    cursor.execute("INSERT IGNORE INTO seller_reputation (seller_id) VALUES (%s)", (existing['id'],))
+                mysql.connection.commit()
+            except Exception as e:
+                mysql.connection.rollback()
+                cursor.close()
+                return err('An account with this phone number or email already exists', 409, 'CONFLICT')
+            cursor.close()
+            _generate_and_send_otp(phone)
+            if email:
+                from app.services.email import send_verification_email
+                send_verification_email(existing['id'], email, data['full_name'])
+            return jsonify({
+                'message': 'Account created. Enter the code we sent by SMS to verify your phone.',
+                'user_id': existing['id'], 'role': role, 'next_step': 'verify_phone'
+            }), 201
         cursor.close()
         return err('An account with this phone number or email already exists', 409, 'CONFLICT')
 
@@ -1039,4 +1068,5 @@ def _generate_and_send_otp(phone_number):
     """, (phone, _hash_otp(phone, otp_code), now + timedelta(minutes=10), now))
     mysql.connection.commit()
     cursor.close()
-    return send_otp(phone, otp_code)
+    send_otp(phone, otp_code)
+    return otp_code
