@@ -19,6 +19,7 @@
 
 import africastalking
 import os
+import requests
 
 # Initialize Africa's Talking with credentials from .env
 # In sandbox mode, no real SMS is sent — it shows in the AT dashboard
@@ -29,6 +30,41 @@ africastalking.initialize(
 
 # Get the SMS service object
 sms = africastalking.SMS
+
+
+def _send_sms_brevo(phone_number, message):
+    """Send SMS via Brevo Transactional SMS API if BREVO_API_KEY and BREVO_SMS_ENABLED=1 are set."""
+    api_key = os.getenv('BREVO_API_KEY')
+    if not api_key or os.getenv('BREVO_SMS_ENABLED', '').lower() not in ('1', 'true', 'yes'):
+        return False
+    recipient = phone_number
+    if recipient.startswith('0'):
+        recipient = '+254' + recipient[1:]
+    elif recipient.startswith('254'):
+        recipient = '+' + recipient
+    try:
+        resp = requests.post(
+            "https://api.brevo.com/v3/transactionalSMS/sms",
+            headers={
+                "accept": "application/json",
+                "api-key": api_key,
+                "content-type": "application/json",
+            },
+            json={
+                "sender": os.getenv('BREVO_SMS_SENDER', os.getenv('AT_SENDER_ID', 'ZUNO'))[:11],
+                "recipient": recipient,
+                "content": message,
+                "type": "transactional",
+            },
+            timeout=10,
+        )
+        if resp.status_code in (200, 201, 202):
+            print(f"[BREVO SMS] Sent to {recipient}: {resp.text}")
+            return True
+        print(f"[BREVO SMS WARN] ({resp.status_code}) to {recipient}: {resp.text}")
+    except Exception as exc:
+        print(f"[BREVO SMS ERROR] {exc}")
+    return False
 
 
 def send_sms(phone_number, message):
@@ -51,6 +87,10 @@ def send_sms(phone_number, message):
     to fail because of it. The transaction is more important
     than the notification. We log the failure and move on.
     """
+    # Try Brevo SMS if enabled
+    if _send_sms_brevo(phone_number, message):
+        return True
+
     # Local testing only: with no Africa's Talking key, show the SMS in the
     # API window instead of sending it. Real sending resumes once the key is set.
     if not os.getenv('AT_API_KEY'):

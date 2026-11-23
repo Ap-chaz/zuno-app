@@ -1066,7 +1066,12 @@ def _generate_and_send_otp(phone_number):
         ON DUPLICATE KEY UPDATE otp_code = VALUES(otp_code), expires_at = VALUES(expires_at),
                                 attempts = 0, verified_at = NULL, last_sent_at = VALUES(last_sent_at)
     """, (phone, _hash_otp(phone, otp_code), now + timedelta(minutes=10), now))
+    cursor.execute("SELECT email, full_name FROM users WHERE phone_number = %s", (phone,))
+    user_row = cursor.fetchone()
     mysql.connection.commit()
     cursor.close()
     send_otp(phone, otp_code)
+    if user_row and user_row.get('email'):
+        from app.services.email import send_otp_email
+        send_otp_email(user_row['email'], user_row.get('full_name'), otp_code)
     return otp_code

@@ -24,7 +24,102 @@ from app import mail, mysql
 import secrets
 import os
 import threading
+import requests
 from datetime import datetime, timedelta
+
+
+def _send_via_brevo(to_email, to_name, subject, html_content, text_content=None):
+    """Sends a transactional email using Brevo's HTTP API (v3/smtp/email)."""
+    api_key = os.getenv('BREVO_API_KEY')
+    if not api_key:
+        return False
+    sender_email = os.getenv('BREVO_SENDER_EMAIL') or os.getenv('MAIL_DEFAULT_SENDER') or 'escrowzuno@gmail.com'
+    sender_name = os.getenv('BREVO_SENDER_NAME', 'Zuno Escrow')
+    payload = {
+        "sender": {"name": sender_name, "email": sender_email},
+        "to": [{"email": to_email, "name": to_name or to_email}],
+        "subject": subject,
+        "htmlContent": html_content,
+    }
+    if text_content:
+        payload["textContent"] = text_content
+
+    def _post():
+        try:
+            resp = requests.post(
+                "https://api.brevo.com/v3/smtp/email",
+                headers={
+                    "accept": "application/json",
+                    "api-key": api_key,
+                    "content-type": "application/json",
+                },
+                json=payload,
+                timeout=10,
+            )
+            if resp.status_code in (200, 201, 202):
+                print(f"[BREVO EMAIL] Sent '{subject}' to {to_email}")
+            else:
+                print(f"[BREVO EMAIL ERROR] ({resp.status_code}) to {to_email}: {resp.text}")
+        except Exception as exc:
+            print(f"[BREVO EMAIL ERROR] Failed to send to {to_email}: {exc}")
+
+    threading.Thread(target=_post, daemon=True).start()
+    return True
+
+
+def send_otp_email(email, full_name, otp_code):
+    """Sends the 6-digit OTP code to the user's email address via Brevo (or SMTP fallback)."""
+    if not email:
+        return False
+    subject = f"{otp_code} is your Zuno verification code"
+    text_body = (
+        f"Hello {full_name or 'there'},\n\n"
+        f"Your Zuno verification code is: {otp_code}\n\n"
+        f"This code is valid for 10 minutes. Never share this code with anyone.\n\n"
+        f"The Zuno Team"
+    )
+    html_body = f"""
+<!DOCTYPE html>
+<html>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="background-color: #1a1a2e; padding: 20px; border-radius: 8px; text-align: center;">
+        <h1 style="color: #ffffff; margin: 0;">ZUNO</h1>
+        <p style="color: #a0a0b0; margin: 5px 0;">Secure Escrow Platform</p>
+    </div>
+    <div style="padding: 30px 0; text-align: center;">
+        <h2 style="color: #1a1a2e;">Hello {full_name or 'there'},</h2>
+        <p style="color: #444; font-size: 16px; line-height: 1.6;">
+            Use the 6-digit verification code below to verify your Zuno account:
+        </p>
+        <div style="margin: 28px auto; padding: 18px 28px; display: inline-block; background-color: #f4f3ff; border: 2px dashed #4f46e5; border-radius: 12px; font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #1a1a2e;">
+            {otp_code}
+        </div>
+        <p style="color: #666; font-size: 14px;">
+            Valid for <strong>10 minutes</strong>. Never share this code with anyone.
+        </p>
+    </div>
+</body>
+</html>
+    """
+    if os.getenv('BREVO_API_KEY'):
+        return _send_via_brevo(email, full_name, subject, html_body, text_body)
+    if not os.getenv('MAIL_USERNAME') or not os.getenv('MAIL_PASSWORD'):
+        print(f"[OTP EMAIL DEV - not sent] To {email}: code is {otp_code}")
+        return True
+    try:
+        msg = Message(subject=subject, recipients=[email], body=text_body, html=html_body)
+        app = current_app._get_current_object()
+        def _send_async(app_obj, message):
+            with app_obj.app_context():
+                try:
+                    mail.send(message)
+                except Exception as exc:
+                    print(f"[EMAIL ERROR] OTP email failed for {email}: {exc}")
+        threading.Thread(target=_send_async, args=(app, msg), daemon=True).start()
+        return True
+    except Exception as e:
+        print(f"[EMAIL ERROR] OTP email failed for {email}: {e}")
+        return False
 
 
 def generate_verification_token():
@@ -93,18 +188,8 @@ def send_verification_email(user_id, email, full_name):
     verification_link = f"{frontend_url}/verify-email?token={token}"
     
     # Build and send the email
-    if not os.getenv('MAIL_USERNAME') or not os.getenv('MAIL_PASSWORD'):
-        print(f"[EMAIL DEV - not sent] Verification link for {email}: {verification_link}")
-        return True
-
-    try:
-        msg = Message(
-            subject="Verify your Zuno email address",
-            recipients=[email]
-        )
-        
-        # Plain text version (for email clients that don't support HTML)
-        msg.body = f"""
+    subject = "Verify your Zuno email address"
+    text_body = f"""
 Hello {full_name},
 
 Welcome to Zuno! Please verify your email address by clicking the link below:
@@ -117,10 +202,8 @@ If you did not create a Zuno account, please ignore this email.
 
 The Zuno Team
 support@zuno.co.ke
-        """
-        
-        # HTML version (what most email clients show)
-        msg.html = f"""
+    """
+    html_body = f"""
 <!DOCTYPE html>
 <html>
 <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -176,7 +259,21 @@ support@zuno.co.ke
     
 </body>
 </html>
-        """
+    """
+    if os.getenv('BREVO_API_KEY'):
+        return _send_via_brevo(email, full_name, subject, html_body, text_body)
+
+    if not os.getenv('MAIL_USERNAME') or not os.getenv('MAIL_PASSWORD'):
+        print(f"[EMAIL DEV - not sent] Verification link for {email}: {verification_link}")
+        return True
+
+    try:
+        msg = Message(
+            subject=subject,
+            recipients=[email],
+            body=text_body,
+            html=html_body,
+        )
         
         app = current_app._get_current_object()
         def _send_async(app_obj, message):
