@@ -116,9 +116,18 @@ function KycScreen() {
     }
   };
 
+  const backPath =
+    redirect && redirect.startsWith("/")
+      ? redirect
+      : user?.role === "seller" || getRole() === "seller"
+        ? "/seller/verification"
+        : user
+          ? "/app/verification"
+          : "/";
+
   return (
     <PhoneFrame>
-      <TopBar title="Verify Your Identity" back="/" />
+      <TopBar title="Verify Your Identity" back={backPath} />
       <div className="flex flex-1 flex-col px-5 pt-3 pb-8">
         {/* Progress — reflects how much of this single form is filled in */}
         <div>
@@ -193,9 +202,11 @@ function KycScreen() {
           {submitting ? (<><Loader2 className="h-5 w-5 animate-spin" /> Submitting…</>) : "Continue"}
         </button>
 
-        <p className="mt-5 text-center text-sm text-muted-foreground">
-          Already have an account? <Link to="/auth/login" className="font-semibold text-gold">Sign in</Link>
-        </p>
+        {!user && (
+          <p className="mt-5 text-center text-sm text-muted-foreground">
+            Already have an account? <Link to="/auth/login" className="font-semibold text-gold">Sign in</Link>
+          </p>
+        )}
       </div>
     </PhoneFrame>
   );
