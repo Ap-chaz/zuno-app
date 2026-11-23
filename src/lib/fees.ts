@@ -150,6 +150,29 @@ export function calculateFeeForTier(itemPrice: number, tierId: FeeTierId): FeeCa
   };
 }
 
+export const FLAT_FEE_PCT = 0.025; // 2.5%
+export const BUYER_SHARE_PCT = 0.0125; // 1.25%
+export const SELLER_SHARE_PCT = 0.0125; // 1.25%
+export const MIN_FEE_KES = 2;
+
+export function calculateFlatFee(itemPrice: number) {
+  const price = Math.max(0, itemPrice);
+  const rawFee = price * FLAT_FEE_PCT;
+  const totalFeeAmount = price > 0 ? Math.max(MIN_FEE_KES, Math.round(rawFee)) : 0;
+  const buyerFeeShare = Math.ceil(totalFeeAmount / 2);
+  const sellerFeeShare = totalFeeAmount - buyerFeeShare;
+
+  return {
+    itemPrice: price,
+    totalFeePct: FLAT_FEE_PCT,
+    totalFeeAmount,
+    buyerFeeShare,
+    sellerFeeShare,
+    buyerDeposit: price + buyerFeeShare,
+    sellerPayout: Math.max(0, price - sellerFeeShare),
+  };
+}
+
 export function formatFeePct(pct: number): string {
   return `${(pct * 100).toFixed(2).replace(/\.?0+$/, "")}%`;
 }
