@@ -114,11 +114,8 @@ def register():
                 return err('An account with this phone number or email already exists', 409, 'CONFLICT')
             cursor.close()
             _generate_and_send_otp(phone)
-            if email:
-                from app.services.email import send_verification_email
-                send_verification_email(existing['id'], email, data['full_name'])
             return jsonify({
-                'message': 'Account created. Enter the code we sent by SMS to verify your phone.',
+                'message': 'Account created. Enter the verification code we sent to continue.',
                 'user_id': existing['id'], 'role': role, 'next_step': 'verify_phone'
             }), 201
         cursor.close()
@@ -145,12 +142,8 @@ def register():
 
     _generate_and_send_otp(phone)
 
-    if email:
-        from app.services.email import send_verification_email
-        send_verification_email(user_id, email, data['full_name'])
-
     return jsonify({
-        'message': 'Account created. Enter the code we sent by SMS to verify your phone.',
+        'message': 'Account created. Enter the verification code we sent to continue.',
         'user_id': user_id, 'role': role, 'next_step': 'verify_phone'
     }), 201
 
@@ -257,7 +250,7 @@ def verify_otp():
         cursor.close()
         return err('This code was already used.', 400, 'OTP_INVALID')
     # verification_status stays UNVERIFIED: it only moves when KYC documents are submitted
-    cursor.execute("UPDATE users SET phone_verified = TRUE WHERE phone_number = %s", (phone,))
+    cursor.execute("UPDATE users SET phone_verified = TRUE, email_verified = IF(email IS NOT NULL, TRUE, email_verified) WHERE phone_number = %s", (phone,))
     mysql.connection.commit()
     cursor.execute("SELECT * FROM users WHERE phone_number = %s", (phone,))
     user = cursor.fetchone()
