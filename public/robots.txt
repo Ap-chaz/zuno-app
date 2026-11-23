@@ -1,2 +1,9 @@
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /admin/*
+Disallow: /app/
+Disallow: /seller/
+Disallow: /pay/
+
+Sitemap: https://escrowzuno.co.ke/sitemap.xml
