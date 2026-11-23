@@ -53,6 +53,34 @@ def _check_secrets():
             "Missing or too-short secrets in environment: " + ", ".join(problems))
 
 
+def _ensure_schema():
+    """Apply db/schema.sql idempotently on startup so fresh databases have all tables."""
+    import re
+    import MySQLdb
+    try:
+        schema_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'db', 'schema.sql')
+        if not os.path.exists(schema_path):
+            return
+        with open(schema_path, 'r', encoding='utf-8') as f:
+            sql = re.sub(r'--[^\n]*', '', f.read())
+        conn = MySQLdb.connect(
+            host=os.getenv('DB_HOST', 'localhost'),
+            user=os.getenv('DB_USER', 'root'),
+            passwd=os.getenv('DB_PASSWORD', ''),
+            db=os.getenv('DB_NAME', 'zuno_platform'),
+            port=int(os.getenv('DB_PORT', 3306)),
+            autocommit=True,
+        )
+        cur = conn.cursor()
+        for stmt in sql.split(';'):
+            if stmt.strip():
+                cur.execute(stmt)
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"[DB] Auto-schema check skipped/warned: {e}")
+
+
 def create_app(run_scheduler=None):
     """
     Creates, configures, and returns the Zuno Flask application.
@@ -73,6 +101,7 @@ def create_app(run_scheduler=None):
     # These values come from our .env file via os.getenv()
     # The second argument is a default value if the .env key is missing
     app.config['MYSQL_HOST'] = os.getenv('DB_HOST', 'localhost')
+    app.config['MYSQL_PORT'] = int(os.getenv('DB_PORT', 3306))
     app.config['MYSQL_USER'] = os.getenv('DB_USER', 'root')
     app.config['MYSQL_PASSWORD'] = os.getenv('DB_PASSWORD', '')
     app.config['MYSQL_DB'] = os.getenv('DB_NAME', 'zuno_platform')
@@ -112,6 +141,9 @@ def create_app(run_scheduler=None):
     bcrypt.init_app(app)
     jwt.init_app(app)
     mail.init_app(app)      # NEW — attach mail to app
+
+    if os.getenv('AUTO_INIT_DB', 'true').lower() in ('1', 'true', 'yes') and not app.config.get('TESTING'):
+        _ensure_schema()
 
     # ── REGISTER ROUTE BLUEPRINTS ─────────────────────────────
     # A Blueprint is a group of related routes.
