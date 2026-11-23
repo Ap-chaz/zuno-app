@@ -109,8 +109,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "Pay sellers you've never met — without the leap of faith. ZUNO holds funds until delivery is confirmed.",
       },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "https://zuno-website.alvanpeter29.workers.dev/" },
-      { property: "og:image", content: "https://zuno-website.alvanpeter29.workers.dev/og-image.png" },
+      { property: "og:url", content: "https://escrowzuno.co.ke/" },
+      { property: "og:image", content: "https://escrowzuno.co.ke/og-image.png" },
       { property: "og:image:width", content: "1200" },
       { property: "og:image:height", content: "630" },
       { property: "og:image:alt", content: "ZUNO — Hold the money. Not the risk." },
@@ -121,7 +121,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "Pay sellers you've never met — without the leap of faith. ZUNO holds funds until delivery is confirmed.",
       },
-      { name: "twitter:image", content: "https://zuno-website.alvanpeter29.workers.dev/og-image.png" },
+      { name: "twitter:image", content: "https://escrowzuno.co.ke/og-image.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },

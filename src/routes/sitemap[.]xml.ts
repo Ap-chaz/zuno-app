@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
 
-const BASE_URL = "https://zuno-website.alvanpeter29.workers.dev";
+const BASE_URL = "https://escrowzuno.co.ke";
 
 interface SitemapEntry {
   path: string;

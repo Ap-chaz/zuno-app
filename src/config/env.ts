@@ -17,17 +17,18 @@ function readBool(value: string | undefined, fallback: boolean): boolean {
 export const env = {
   /**
    * Base URL for the backend API INCLUDING the /api prefix, no trailing slash,
-   * e.g. https://zuno-api.up.railway.app/api. Empty string in mock mode.
+   * e.g. https://zuno-api.up.railway.app/api.
    */
-  apiBaseUrl: ((import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "").replace(/\/+$/, ""),
+  apiBaseUrl: (
+    (import.meta.env.VITE_API_BASE_URL as string | undefined) ||
+    "https://zuno-app-production-4d8a9cb5.up.railway.app/api"
+  ).replace(/\/+$/, ""),
 
   /**
-   * When true (default in this prototype), all `services/*` calls resolve
-   * against local mock data instead of hitting the network. Flip to false
-   * (and set VITE_API_BASE_URL) once a real backend is available — no
-   * component code needs to change, only the service implementations.
+   * When true, all `services/*` calls resolve against local mock data instead
+   * of hitting the network. Defaults to false (real backend API).
    */
-  useMockApi: readBool(import.meta.env.VITE_USE_MOCK_API, true),
+  useMockApi: readBool(import.meta.env.VITE_USE_MOCK_API, false),
 
   /** Simulated network latency (ms) for the mock adapter, so loading/skeleton states are visible during development. */
   mockLatencyMs: Number(import.meta.env.VITE_MOCK_LATENCY_MS ?? 500),
