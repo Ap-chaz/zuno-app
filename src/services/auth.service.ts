@@ -116,9 +116,10 @@ function buildMockUser(overrides: Partial<User> = {}): User {
 }
 
 const PENDING_PHONE_KEY = "zuno_pending_phone";
+const PENDING_EMAIL_KEY = "zuno_pending_email";
 export const USER_UPDATED_EVENT = "zuno:user-updated";
 
-/** The phone number waiting for its SMS code (kept for this tab only). */
+/** The phone number waiting for its verification code (kept for this tab only). */
 export function getPendingPhone(): string | null {
   if (typeof window === "undefined") return null;
   try {
@@ -132,6 +133,25 @@ function setPendingPhone(phone: string | null) {
   try {
     if (phone) window.sessionStorage.setItem(PENDING_PHONE_KEY, phone);
     else window.sessionStorage.removeItem(PENDING_PHONE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** The email address where the OTP code was sent (kept for this tab only). */
+export function getPendingEmail(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.sessionStorage.getItem(PENDING_EMAIL_KEY);
+  } catch {
+    return null;
+  }
+}
+function setPendingEmail(email: string | null) {
+  if (typeof window === "undefined") return;
+  try {
+    if (email) window.sessionStorage.setItem(PENDING_EMAIL_KEY, email);
+    else window.sessionStorage.removeItem(PENDING_EMAIL_KEY);
   } catch {
     /* ignore */
   }
@@ -207,6 +227,7 @@ export const authService = {
       });
       saveMockAccount(user);
       setPendingPhone(input.phone.trim());
+      setPendingEmail(input.email.trim() || null);
       return mockResolve({ phone: input.phone.trim() });
     }
     await apiClient.post("/auth/register", {
@@ -217,6 +238,7 @@ export const authService = {
       role: input.role,
     });
     setPendingPhone(input.phone.trim());
+    setPendingEmail(input.email.trim() || null);
     return { phone: input.phone.trim() };
   },
 
@@ -231,6 +253,7 @@ export const authService = {
       saveMockAccount(session.user);
       persistSession(session);
       setPendingPhone(null);
+      setPendingEmail(null);
       return mockResolve(session);
     }
     const res = await apiClient.post<{ token: string; user: Record<string, unknown> }>("/auth/verify-otp", {
@@ -240,6 +263,7 @@ export const authService = {
     const session: AuthSession = { token: res.token, user: mapUser(res.user) };
     persistSession(session);
     setPendingPhone(null);
+    setPendingEmail(null);
     return session;
   },
 
@@ -251,6 +275,8 @@ export const authService = {
 
   setPendingPhone,
   getPendingPhone,
+  setPendingEmail,
+  getPendingEmail,
 
   /** Seller identity check: uploads the ID photos to the API for admin review. */
   async submitKyc(input: {

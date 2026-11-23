@@ -21,6 +21,7 @@ function Verify() {
   const navigate = useNavigate();
   const { verifyOtp, resendOtp } = useAuth();
   const [phone, setPhone] = useState<string | null>(null);
+  const [email, setEmail] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,6 +30,7 @@ function Verify() {
 
   useEffect(() => {
     setPhone(authService.getPendingPhone());
+    setEmail(authService.getPendingEmail());
   }, []);
 
   useEffect(() => {
@@ -94,7 +96,7 @@ function Verify() {
           <p className="text-xs font-bold tracking-[0.2em] text-accent">OTP VERIFICATION</p>
           <div>
             <p className="text-sm text-muted-foreground">Enter the 6-digit code sent to</p>
-            <p className="mt-1 text-base font-semibold">{phone ?? "your phone"}</p>
+            <p className="mt-1 text-base font-semibold">{email || phone || "your email"}</p>
           </div>
 
           <InputOTP

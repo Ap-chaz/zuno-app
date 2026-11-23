@@ -62,9 +62,10 @@ function Login() {
       routeAfterLogin();
     } catch (err) {
       if (err instanceof ApiError && err.code === "PHONE_NOT_VERIFIED") {
-        // The API just texted a fresh code to the number on this account.
+        // The API just sent a fresh code to the account.
         authService.setPendingPhone((err.data?.phone as string | undefined) ?? (values.identifier.includes("@") ? null : values.identifier.trim()));
-        toast.info("Verify your phone number to continue.");
+        authService.setPendingEmail((err.data?.email as string | undefined) ?? (values.identifier.includes("@") ? values.identifier.trim() : null));
+        toast.info("Enter the verification code sent to your email to continue.");
         navigate({ to: "/auth/verify" });
         return;
       }
