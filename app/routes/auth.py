@@ -331,11 +331,12 @@ def login():
     if not user['phone_verified']:
         cursor.close()
         _generate_and_send_otp(user['phone_number'])
-        # Only reached with the correct password, so returning the number is safe.
-        return jsonify({'error': 'Verify your phone number first. We sent you a new code.',
-                        'message': 'Verify your phone number first. We sent you a new code.',
+        # Only reached with the correct password, so returning the number and email is safe.
+        return jsonify({'error': 'Verify your account first. We sent you a new code.',
+                        'message': 'Verify your account first. We sent you a new code.',
                         'code': 'PHONE_NOT_VERIFIED', 'status': 403,
-                        'phone': user['phone_number']}), 403
+                        'phone': user['phone_number'],
+                        'email': user.get('email')}), 403
 
     cursor.execute("UPDATE users SET failed_logins = 0, locked_until = NULL WHERE id = %s",
                    (user['id'],))
