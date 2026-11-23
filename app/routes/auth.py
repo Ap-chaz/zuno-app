@@ -354,45 +354,61 @@ def login():
 
 @auth_bp.route('/forgot-password', methods=['POST'])
 def forgot_password():
-    """Body: { "phone_number" }. Always answers the same way; only registered numbers get a code."""
+    """Body: { "email" } or { "phone_number" }. Sends code via email (or SMS)."""
     rate_limit_error = check_rate_limit(5, 1, scope='forgot_password')
     if rate_limit_error:
         return rate_limit_error
-    data = request.get_json(silent=True)
-    valid, error = validate_required_fields(data, ['phone_number'])
-    if not valid:
-        return err(error, 400, 'VALIDATION_ERROR')
-    phone = normalize_phone(data['phone_number'])
-    if not phone:
-        return err('Enter the Kenyan phone number linked to your account', 400, 'VALIDATION_ERROR')
+    data = request.get_json(silent=True) or {}
+    identifier = str(data.get('email') or data.get('phone_number') or data.get('identifier') or '').strip()
+    if not identifier:
+        return err('Enter your registered email address', 400, 'VALIDATION_ERROR')
 
     cursor = mysql.connection.cursor()
-    cursor.execute("SELECT id FROM users WHERE phone_number = %s", (phone,))
-    exists = cursor.fetchone()
+    if '@' in identifier:
+        cursor.execute("SELECT id, phone_number, email, full_name FROM users WHERE LOWER(email) = %s", (identifier.lower(),))
+    else:
+        phone = normalize_phone(identifier) or identifier
+        cursor.execute("SELECT id, phone_number, email, full_name FROM users WHERE phone_number = %s", (phone,))
+    user_row = cursor.fetchone()
     cursor.close()
-    if exists:
-        _generate_and_send_otp(phone)
-    return jsonify({'message': 'If this number is registered, a reset code was sent.'}), 200
+    if user_row:
+        _generate_and_send_otp(user_row['phone_number'])
+    return jsonify({'message': 'If this account is registered, a reset code was sent.'}), 200
 
 
 @auth_bp.route('/reset-password', methods=['POST'])
 def reset_password():
-    """Body: { "phone_number", "otp_code", "new_password" }. The code is single use."""
+    """Body: { "email" or "phone_number", "otp_code", "new_password" }. The code is single use."""
     rate_limit_error = check_rate_limit(10, 1, scope='reset_password')
     if rate_limit_error:
         return rate_limit_error
-    data = request.get_json(silent=True)
-    valid, error = validate_required_fields(data, ['phone_number', 'otp_code', 'new_password'])
-    if not valid:
-        return err(error, 400, 'VALIDATION_ERROR')
-    phone = normalize_phone(data['phone_number'])
-    if not phone:
-        return err('Enter a valid Kenyan phone number', 400, 'VALIDATION_ERROR')
-    valid, error = validate_password(data['new_password'])
-    if not valid:
-        return err(error, 400, 'VALIDATION_ERROR')
+    data = request.get_json(silent=True) or {}
+    identifier = str(data.get('email') or data.get('phone_number') or data.get('identifier') or '').strip()
+    if not identifier:
+        return err('Enter your registered email address', 400, 'VALIDATION_ERROR')
+    if not data.get('otp_code'):
+        return err('Enter the 6-digit verification code', 400, 'VALIDATION_ERROR')
+    if not data.get('new_password'):
+        return err('Enter your new password', 400, 'VALIDATION_ERROR')
 
     cursor = mysql.connection.cursor()
+    if '@' in identifier:
+        cursor.execute("SELECT id, phone_number, email FROM users WHERE LOWER(email) = %s", (identifier.lower(),))
+    else:
+        phone = normalize_phone(identifier) or identifier
+        cursor.execute("SELECT id, phone_number, email FROM users WHERE phone_number = %s", (phone,))
+    user_row = cursor.fetchone()
+    if not user_row:
+        cursor.close()
+        return err('Account not found.', 404, 'NOT_FOUND')
+
+    phone = user_row['phone_number']
+
+    valid, error = validate_password(data['new_password'])
+    if not valid:
+        cursor.close()
+        return err(error, 400, 'VALIDATION_ERROR')
+
     cursor.execute("SELECT * FROM otp_verifications WHERE phone_number = %s", (phone,))
     rec = cursor.fetchone()
     if not rec or rec['verified_at'] is not None or datetime.now() > rec['expires_at']:
@@ -416,7 +432,7 @@ def reset_password():
     new_hash = bcrypt.generate_password_hash(data['new_password']).decode('utf-8')
     # Proving the code also proves the phone; unlock a locked-out account too.
     cursor.execute("UPDATE users SET password_hash = %s, phone_verified = TRUE, failed_logins = 0, "
-                   "locked_until = NULL WHERE phone_number = %s", (new_hash, phone))
+                   "locked_until = NULL WHERE id = %s", (new_hash, user_row['id']))
     mysql.connection.commit()
     cursor.close()
     return jsonify({'message': 'Password updated. You can log in now.'}), 200
