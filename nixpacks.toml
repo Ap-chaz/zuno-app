@@ -1,8 +1,9 @@
 [phases.setup]
-aptPkgs = ["pkg-config", "default-libmysqlclient-dev", "build-essential"]
+nixPkgs = ["...", "pkg-config", "libmysqlclient", "libmysqlclient.dev", "gcc"]
 
 [start]
 cmd = "gunicorn run:app --workers 2 --bind 0.0.0.0:$PORT"
+
 
 
 
