@@ -124,13 +124,19 @@ def create_transaction():
     seller_user = cursor.fetchone()
     if not seller_user or (not seller_user.get('is_verified') and seller_user.get('verification_status') != 'VERIFIED'):
         cursor.close()
-        return jsonify({'error': 'Identity verification (KYC) required before creating transactions.'}), 403
+        status = seller_user.get('verification_status', 'UNVERIFIED') if seller_user else 'UNVERIFIED'
+        if status in ('PENDING', 'SUBMITTED', 'UNDER_REVIEW', 'RESUBMITTED'):
+            return jsonify({'error': 'Your identity verification (KYC) is currently under review. Transactions can be created once approved.'}), 403
+        return jsonify({'error': 'Identity verification (KYC) required before creating transactions. Please submit your identity documents.'}), 403
 
     if contract.get('buyer_user_id'):
         cursor.execute("SELECT is_verified, verification_status FROM users WHERE id = %s", (contract['buyer_user_id'],))
         buyer_user = cursor.fetchone()
         if not buyer_user or (not buyer_user.get('is_verified') and buyer_user.get('verification_status') != 'VERIFIED'):
             cursor.close()
+            status = buyer_user.get('verification_status', 'UNVERIFIED') if buyer_user else 'UNVERIFIED'
+            if status in ('PENDING', 'SUBMITTED', 'UNDER_REVIEW', 'RESUBMITTED'):
+                return jsonify({'error': 'The buyer’s identity verification is currently under review. Please wait for their account to be approved.'}), 403
             return jsonify({'error': 'The buyer must complete identity verification (KYC) before this transaction can be created.'}), 403
 
     # ── Check no transaction already exists for this contract ─

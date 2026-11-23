@@ -90,7 +90,13 @@ def initiate_payment():
     if not user:
         return err('Account not found or suspended', 401, 'UNAUTHENTICATED')
     if not user.get('is_verified') and user.get('verification_status') != 'VERIFIED':
-        return err('Identity verification (KYC) required before making payments. Please verify your account first.', 403, 'KYC_REQUIRED')
+        status = user.get('verification_status', 'UNVERIFIED')
+        if status in ('PENDING', 'SUBMITTED', 'UNDER_REVIEW', 'RESUBMITTED'):
+            return err('Your identity verification (KYC) is currently under review. Payments will be enabled as soon as your account is approved.', 403, 'KYC_PENDING')
+        elif status == 'REJECTED':
+            return err('Your identity verification was rejected. Please review the reason in the Verification Center and resubmit your documents.', 403, 'KYC_REJECTED')
+        else:
+            return err('Identity verification (KYC) required before making payments. Please submit your identity documents to get verified.', 403, 'KYC_REQUIRED')
 
     data = request.get_json(silent=True) or {}
     valid, error = validate_required_fields(data, ['transaction_id'])

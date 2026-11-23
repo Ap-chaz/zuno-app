@@ -77,7 +77,13 @@ def create_contract():
     if not user['phone_verified']:
         return err('Verify your phone number before starting a deal.', 403, 'PHONE_NOT_VERIFIED')
     if not user.get('is_verified') and user.get('verification_status') != 'VERIFIED':
-        return err('Identity verification (KYC) required. Please submit your identity documents and get verified before starting a deal.', 403, 'KYC_REQUIRED')
+        status = user.get('verification_status', 'UNVERIFIED')
+        if status in ('PENDING', 'SUBMITTED', 'UNDER_REVIEW', 'RESUBMITTED'):
+            return err('Your identity verification (KYC) is currently under review. We will notify you via SMS once an admin approves your documents.', 403, 'KYC_PENDING')
+        elif status == 'REJECTED':
+            return err('Your identity verification was rejected. Please review the reason in the Verification Center and resubmit your documents.', 403, 'KYC_REJECTED')
+        else:
+            return err('Identity verification (KYC) required. Please submit your identity documents and get verified before starting a deal.', 403, 'KYC_REQUIRED')
 
     data = request.get_json(silent=True)
 
@@ -119,6 +125,9 @@ def create_contract():
 
     if not seller.get('is_verified') and seller.get('verification_status') != 'VERIFIED':
         cursor.close()
+        seller_status = seller.get('verification_status', 'UNVERIFIED')
+        if seller_status in ('PENDING', 'SUBMITTED', 'UNDER_REVIEW', 'RESUBMITTED'):
+            return err('This seller’s identity verification is currently under review. Deals can only be created once the seller is approved.', 400, 'SELLER_VERIFICATION_PENDING')
         return err('This seller has not completed identity verification (KYC). Deals can only be created with verified sellers.', 400, 'SELLER_NOT_VERIFIED')
 
     if seller['id'] == user['id']:
@@ -277,8 +286,13 @@ def confirm_contract(contract_id):
     # Seller must be KYC verified
     if not contract.get('is_verified') and contract.get('verification_status') != 'VERIFIED':
         cursor.close()
+        status = contract.get('verification_status', 'UNVERIFIED')
+        if status in ('PENDING', 'SUBMITTED', 'UNDER_REVIEW', 'RESUBMITTED'):
+            return jsonify({
+                'error': 'Your identity verification (KYC) is currently under review. Contracts can be confirmed once approved.'
+            }), 403
         return jsonify({
-            'error': 'Identity verification (KYC) required before confirming contracts.'
+            'error': 'Identity verification (KYC) required before confirming contracts. Please submit your identity documents.'
         }), 403
 
     # Can only confirm a contract that is awaiting review
