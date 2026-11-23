@@ -1,8 +1,15 @@
 [phases.setup]
 nixPkgs = ["...", "pkg-config", "libmysqlclient", "libmysqlclient.dev", "gcc"]
 
+[phases.install]
+cmds = [
+  "python -m venv --copies /opt/venv",
+  ". /opt/venv/bin/activate && export MYSQLCLIENT_CFLAGS=\"$(mysql_config --cflags)\" MYSQLCLIENT_LDFLAGS=\"$(mysql_config --libs)\" && pip install -r requirements.txt"
+]
+
 [start]
 cmd = "gunicorn run:app --workers 2 --bind 0.0.0.0:$PORT"
+
 
 
 
