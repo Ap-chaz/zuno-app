@@ -69,14 +69,13 @@ export function getKycStatus(): KycStatus {
 }
 
 /**
- * May this person transact? Sellers need an approved KYC; buyers need a verified phone number.
- * This only decides what the UI shows. The API enforces the same rules on every request,
+ * May this person transact? Both sellers and buyers must be KYC-verified.
+ * This decides what the UI shows. The API enforces the same rules on every request,
  * so editing browser storage cannot unlock anything real.
  */
 export function isKycVerified(): boolean {
   const u = storedUser();
   if (!u) return false;
-  if (u.role === "buyer") return Boolean(u.phoneVerified);
   return getKycStatus() === "verified";
 }
 
