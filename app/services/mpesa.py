@@ -275,9 +275,11 @@ def send_b2c_payment(phone_number, amount, transaction_id, remarks,
                 'message': 'Invalid phone number.'}
 
     environment = os.getenv('MPESA_ENVIRONMENT', 'sandbox')
-    # Sandbox only: Safaricom's simulator can only pay its own test line.
-    if environment != 'production' and os.getenv('MPESA_SANDBOX_PHONE'):
-        phone = _format_phone(os.getenv('MPESA_SANDBOX_PHONE')) or phone
+    # Sandbox only: Safaricom's B2C simulator can only pay its own registered test line
+    # (254708374149), otherwise it rejects with "Credit Party customer type can't be supported".
+    if environment != 'production':
+        sandbox_b2c_phone = os.getenv('MPESA_B2C_SANDBOX_PHONE') or os.getenv('MPESA_SANDBOX_PHONE') or '254708374149'
+        phone = _format_phone(sandbox_b2c_phone) or phone
 
     # Payouts can come from a different shortcode than payments (sandbox: 600982).
     shortcode = os.getenv('MPESA_B2C_SHORTCODE') or os.getenv('MPESA_SHORTCODE')
