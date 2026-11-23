@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Phone, Loader2, KeyRound, Eye, EyeOff } from "lucide-react";
+import { Mail, Loader2, KeyRound, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { TopBar } from "@/components/zuno/TopBar";
 import { PhoneFrame } from "@/components/zuno/PhoneFrame";
@@ -27,12 +27,12 @@ function Forgot() {
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (code.trim().length < 4) return toast.error("Enter the code from the SMS.");
+    if (code.trim().length < 4) return toast.error("Enter the code sent to your email.");
     if (password.length < 8) return toast.error("Use a password of at least 8 characters.");
     if (password !== confirmPassword) return toast.error("The two passwords do not match.");
     setIsSubmitting(true);
     try {
-      await authService.resetPassword({ phone: identifier.trim(), code: code.trim(), newPassword: password });
+      await authService.resetPassword({ identifier: identifier.trim(), code: code.trim(), newPassword: password });
       toast.success("Password changed. Log in with your new password.");
       navigate({ to: "/auth/login" });
     } catch (err) {
@@ -46,14 +46,14 @@ function Forgot() {
     e.preventDefault();
     setError(null);
     if (!identifier.trim()) {
-      setError("Enter your phone number");
+      setError("Enter your email address");
       return;
     }
     setIsSubmitting(true);
     try {
       await authService.requestPasswordReset(identifier);
       setSent(true);
-      toast.success("Reset code sent — check your SMS.");
+      toast.success("Reset code sent — check your email.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't send the reset code. Try again.");
     } finally {
@@ -68,7 +68,7 @@ function Forgot() {
         {sent ? (
           <form onSubmit={handleReset} noValidate className="flex flex-1 flex-col">
             <p className="text-sm leading-relaxed text-muted-foreground">
-              We sent a code by SMS to <span className="font-medium text-foreground">{identifier}</span>. Enter it with a new password.
+              We sent a reset code to <span className="font-medium text-foreground">{identifier}</span>. Enter it with a new password.
             </p>
             <input value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" maxLength={6} placeholder="6-digit code"
               className="mt-6 h-14 rounded-2xl border border-border/60 bg-input px-4 text-sm outline-none focus:border-gold/50" />
@@ -99,21 +99,22 @@ function Forgot() {
         ) : (
           <form onSubmit={handleSubmit} noValidate className="flex flex-1 flex-col">
             <p className="text-sm leading-relaxed text-muted-foreground">
-              Enter your registered phone number and we'll text you a reset code.
+              Enter your registered email address and we'll send you a password reset code.
             </p>
             <label
               className={`mt-6 flex h-14 items-center gap-3 rounded-2xl border bg-input px-4 transition-colors focus-within:border-gold/50 ${
                 error ? "border-destructive/60" : "border-border/60"
               }`}
             >
-              <Phone className="h-4 w-4 text-muted-foreground" />
+              <Mail className="h-4 w-4 text-muted-foreground" />
               <input
+                type="email"
                 value={identifier}
                 onChange={(e) => {
                   setIdentifier(e.target.value);
                   if (error) setError(null);
                 }}
-                placeholder="Phone number e.g. 0712345678"
+                placeholder="Email address e.g. you@example.com"
                 aria-invalid={Boolean(error)}
                 className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
               />

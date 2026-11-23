@@ -334,22 +334,30 @@ export const authService = {
   updateStoredUser,
 
   async requestPasswordReset(identifier: string): Promise<{ sent: true }> {
-    if (!identifier.trim()) {
-      return mockReject("Enter the phone number linked to your account.", 400, "VALIDATION_ERROR");
+    const trimmed = identifier.trim();
+    if (!trimmed) {
+      return mockReject("Enter your registered email address.", 400, "VALIDATION_ERROR");
     }
     if (env.useMockApi) return mockResolve({ sent: true });
-    await apiClient.post("/auth/forgot-password", { phone_number: identifier.trim() });
-    setPendingPhone(identifier.trim());
+    const payload = trimmed.includes("@") ? { email: trimmed } : { phone_number: trimmed };
+    await apiClient.post("/auth/forgot-password", payload);
+    setPendingPhone(trimmed);
     return { sent: true };
   },
 
-  async resetPassword(input: { phone: string; code: string; newPassword: string }): Promise<void> {
+  async resetPassword(input: { identifier?: string; phone?: string; code: string; newPassword: string }): Promise<void> {
     if (env.useMockApi) return mockResolve<void>(undefined);
-    await apiClient.post("/auth/reset-password", {
-      phone_number: input.phone,
+    const target = (input.identifier || input.phone || "").trim();
+    const payload: Record<string, string> = {
       otp_code: input.code,
       new_password: input.newPassword,
-    });
+    };
+    if (target.includes("@")) {
+      payload.email = target;
+    } else {
+      payload.phone_number = target;
+    }
+    await apiClient.post("/auth/reset-password", payload);
   },
 
   async logout(): Promise<void> {
